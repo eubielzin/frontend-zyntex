@@ -41,13 +41,7 @@ import {
 
 // Ajustei o MOCK para ter todos os campos das colunas novas
 const promotores = [
-  { id: 1, nome: "Adryelle Cristiny Santos", id_integracao: "-", login: "Adryelle.promotora", tipo: "Interno", bateria: 100, ultimo_sinc: "20/09/2025 13:55", ultimo_envio: "20/09/2025 13:55" },
-  { id: 2, nome: "João Gabriel Souza", id_integracao: "20882025", login: "joao.souza", tipo: "Externo", bateria: 98, ultimo_sinc: "20/09/2025 13:50", ultimo_envio: "20/09/2025 13:50" },
-  { id: 3, nome: "Maria Eduarda Lima", id_integracao: "20882025", login: "maria.lima", tipo: "Interno", bateria: 13, ultimo_sinc: "20/09/2025 11:30", ultimo_envio: "20/09/2025 11:30" },
-  { id: 4, nome: "Carlos Eduardo Silva", id_integracao: "20882025", login: "carlos.silva", tipo: "Externo", bateria: 45, ultimo_sinc: "20/09/2025 10:15", ultimo_envio: "20/09/2025 10:15" },
-  { id: 5, nome: "Ana Paula Costa", id_integracao: "20882025", login: "ana.costa", tipo: "Interno", bateria: 89, ultimo_sinc: "20/09/2025 09:40", ultimo_envio: "20/09/2025 09:40" },
-  { id: 6, nome: "Pedro Henrique Alves", id_integracao: "20882025", login: "pedro.alves", tipo: "Externo", bateria: 67, ultimo_sinc: "20/09/2025 09:00", ultimo_envio: "20/09/2025 09:00" },
-  { id: 7, nome: "Fernanda Oliveira", id_integracao: "20882025", login: "fernanda.oli", tipo: "Interno", bateria: 22, ultimo_sinc: "20/09/2025 08:30", ultimo_envio: "20/09/2025 08:30" },
+  { id: 1, descricao: "Item A", industria: "Indústria X", marca: "Subgrupo 1", precoSugerido: "20,89", variacao: "90%" },
 ]
 
 export default function ListaPromotoresPage() {
@@ -129,10 +123,11 @@ export default function ListaPromotoresPage() {
                 <TableHead className="w-[50px]">
                   <Checkbox className="translate-y-0.5 bg-white border-gray-300" />
                 </TableHead>
-                <TableHead className="min-w-[500px] font-montserrat font-medium text-xs text-gray-600 uppercase">Descrição ↓</TableHead>
-                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase">Identificador ↓</TableHead>
-                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Subgrupo de Item	 ↓</TableHead>
-                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Categorias de Itens	 ↓</TableHead>
+                <TableHead className="min-w-[180px] font-montserrat font-medium text-xs text-gray-600 uppercase">Descrição ↓</TableHead>
+                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase">Indústria ↓</TableHead>
+                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Marca</TableHead>
+                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Preço Sugerido</TableHead>
+                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Variação</TableHead>
                 <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase text-right"></TableHead>                
               </TableRow>
             </TableHeader>
@@ -145,21 +140,25 @@ export default function ListaPromotoresPage() {
                   
                  
                   <TableCell className="font-medium text-gray-700">
-                    {promotor.nome}
+                    {promotor.descricao}
                   </TableCell>
                   
                   
                   <TableCell className="text-gray-500 text-sm">
-                    {promotor.id_integracao}
+                    {promotor.industria}
                   </TableCell>
 
                   
                   <TableCell className="text-gray-500 text-sm">
-                    {promotor.login}
+                    {promotor.marca}
                   </TableCell>
                   
                   <TableCell className="text-gray-500 text-sm">
-                    {promotor.tipo}
+                    {promotor.precoSugerido}
+                  </TableCell>
+
+                  <TableCell className="text-gray-500 text-sm">
+                    {promotor.variacao}
                   </TableCell>
                   
 

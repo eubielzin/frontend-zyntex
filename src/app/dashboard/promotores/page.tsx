@@ -44,7 +44,7 @@ interface Promotor {
   id: number;
   nome: string;
   cidade: string;
-  login: string;
+  username: string;
   metaMensal: number;
   bateria: number;
   ultimo_sinc: string;
@@ -82,7 +82,7 @@ export default function ListaPromotoresPage() {
 
   // DELETE: Excluir um promotor por ID
   const handleDelete = async (id: number) => {
-    console.log("Deletando promotor ID:", id); // deve mostrar número válido
+    console.log("Deletando promotor ID:", id); 
     if (!confirm("Tem certeza que deseja excluir este promotor?")) return;
 
     try {
@@ -201,7 +201,7 @@ export default function ListaPromotoresPage() {
                     <TableCell><Checkbox className="border-gray-300" /></TableCell>
                     <TableCell className="font-medium text-gray-700">{promotor.nome}</TableCell>
                     <TableCell className="text-gray-500 text-sm">{promotor.cidade || "-"}</TableCell>
-                    <TableCell className="text-gray-500 text-sm">{promotor.login}</TableCell>
+                    <TableCell className="text-gray-500 text-sm">{promotor.username}</TableCell>
                     <TableCell className="text-gray-500 text-sm">{promotor.metaMensal}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

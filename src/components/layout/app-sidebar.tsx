@@ -46,10 +46,7 @@ const MENU_ITEMS: MenuItem[] = [
     title: "Tarefas",
     icon: "/icons/task.png", 
     url: "/dashboard/tarefas",
-    items: [
-      { title: "Lista de Tarefas", url: "/dashboard/tarefas/lista" },
-      { title: "Nova Tarefa", url: "/dashboard/tarefas/novo" },
-    ]
+    
   },
   {
     title: "Locais",
@@ -66,7 +63,7 @@ const MENU_ITEMS: MenuItem[] = [
     title: "Indústrias",
     icon: "/icons/warehouse.png",
     url: "/dashboard/industrias",
-    items: [{ title: "Lista de Indústrias", url: "/dashboard/industrias/lista" }]
+    
   },
   {
     title: "Itens",

@@ -40,14 +40,8 @@ import {
 } from "@/components/ui/pagination"
 
 // Ajustei o MOCK para ter todos os campos das colunas novas
-const promotores = [
-  { id: 1, nome: "Adryelle Cristiny Santos", id_integracao: "-", login: "Adryelle.promotora", tipo: "Interno", bateria: 100, ultimo_sinc: "20/09/2025 13:55", ultimo_envio: "20/09/2025 13:55" },
-  { id: 2, nome: "João Gabriel Souza", id_integracao: "20882025", login: "joao.souza", tipo: "Externo", bateria: 98, ultimo_sinc: "20/09/2025 13:50", ultimo_envio: "20/09/2025 13:50" },
-  { id: 3, nome: "Maria Eduarda Lima", id_integracao: "20882025", login: "maria.lima", tipo: "Interno", bateria: 13, ultimo_sinc: "20/09/2025 11:30", ultimo_envio: "20/09/2025 11:30" },
-  { id: 4, nome: "Carlos Eduardo Silva", id_integracao: "20882025", login: "carlos.silva", tipo: "Externo", bateria: 45, ultimo_sinc: "20/09/2025 10:15", ultimo_envio: "20/09/2025 10:15" },
-  { id: 5, nome: "Ana Paula Costa", id_integracao: "20882025", login: "ana.costa", tipo: "Interno", bateria: 89, ultimo_sinc: "20/09/2025 09:40", ultimo_envio: "20/09/2025 09:40" },
-  { id: 6, nome: "Pedro Henrique Alves", id_integracao: "20882025", login: "pedro.alves", tipo: "Externo", bateria: 67, ultimo_sinc: "20/09/2025 09:00", ultimo_envio: "20/09/2025 09:00" },
-  { id: 7, nome: "Fernanda Oliveira", id_integracao: "20882025", login: "fernanda.oli", tipo: "Interno", bateria: 22, ultimo_sinc: "20/09/2025 08:30", ultimo_envio: "20/09/2025 08:30" },
+const rotas = [
+  { id: 1, descricao: "Rota A",  },
 ]
 
 export default function RotaPage() {
@@ -131,31 +125,27 @@ export default function RotaPage() {
                 <TableHead className="w-[50px]">
                   <Checkbox className="translate-y-0.5 bg-white border-gray-300" />
                 </TableHead>
-                <TableHead className="min-w-[700px] font-montserrat font-medium text-xs text-gray-600 uppercase">Descrição ↓</TableHead>
-                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase">ID para integração ↓</TableHead>
+                <TableHead className="min-w-[300px] font-montserrat font-medium text-xs text-gray-600 uppercase">ID</TableHead>
+                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase">Descrição ↓</TableHead>
                 <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase text-right"></TableHead>                
               </TableRow>
             </TableHeader>
             <TableBody>
-              {promotores.map((promotor) => (
-                <TableRow key={promotor.id} className="hover:bg-gray-50/50">
+              {rotas.map((rotas) => (
+                <TableRow key={rotas.id} className="hover:bg-gray-50/50">
                   <TableCell>
                     <Checkbox className="translate-y-0.5 border-gray-300" />
+                  </TableCell>
+
+                  <TableCell className="font-medium text-gray-700">
+                    {rotas.id}
                   </TableCell>
                   
                  
                   <TableCell className="font-medium text-gray-700">
-                    {promotor.nome}
-                  </TableCell>
-                  
-                  
-                  <TableCell className="text-gray-500 text-sm">
-                    {promotor.id_integracao}
+                    {rotas.descricao}
                   </TableCell>
 
-
-                  
-                  
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
