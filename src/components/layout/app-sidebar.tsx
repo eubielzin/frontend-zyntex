@@ -32,11 +32,7 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  {
-    title: "Painel de Gestão",
-    icon: "/icons/management_panel.png", 
-    url: "/dashboard",
-  },
+
   {
     title: "Promotores",
     icon: "/icons/person.png", 
@@ -95,7 +91,7 @@ export function AppSidebar() {
   return (
     <Sidebar variant="inset" className="p-0">
       <SidebarHeader className="flex flex-col bg-white items-center justify-center py-6  border-gray-100">
-        <div className="relative w-32 h-16">
+        <a className="relative w-32 h-16" href="/dashboard/">
             <Image 
               src="/logos/Logo.png" 
               alt="Zyntex Logo" 
@@ -103,7 +99,7 @@ export function AppSidebar() {
               className="object-contain"
               priority
             />
-        </div>
+        </a>
       </SidebarHeader>
 
       <SidebarContent className="px-3 py-4 bg-white">
