@@ -97,7 +97,7 @@ export default function ListaPromotoresPage() {
         alert("Erro ao excluir o registro no servidor.");
       }
     } catch (error) {
-      console.error("Erro ao deletar:", error);
+      console.error("Erro ao deletarrrrr:", error);
       alert("Erro de conexão ao tentar excluir.");
     }
   };
