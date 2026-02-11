@@ -1,15 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { 
-  Search, 
-  Plus, 
-  ChevronDown, 
-  Pencil, 
-  MapPin, 
-  Trash2, 
+import {
+  Search,
+  Plus,
+  ChevronDown,
+  Pencil,
+  MapPin,
+  Trash2,
   Check,
-  Loader2 
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -45,7 +45,7 @@ interface Promotor {
   nome: string;
   cidade: string;
   login: string;
-  tipo: string;
+  metaMensal: number;
   bateria: number;
   ultimo_sinc: string;
   ultimo_envio: string;
@@ -69,10 +69,10 @@ export default function ListaPromotoresPage() {
   const fetchPromotores = async () => {
     try {
       setLoading(true);
-      const response = await fetch("https://zyntex-api.onrender.com/api/promotor");
+      const response = await fetch("http://localhost:8080/api/promotor");
       if (!response.ok) throw new Error("Erro ao carregar dados");
       const data = await response.json();
-      setPromotores(Array.isArray(data) ? data : []); 
+      setPromotores(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Erro na requisição:", error);
     } finally {
@@ -82,17 +82,18 @@ export default function ListaPromotoresPage() {
 
   // DELETE: Excluir um promotor por ID
   const handleDelete = async (id: number) => {
+    console.log("Deletando promotor ID:", id); // deve mostrar número válido
     if (!confirm("Tem certeza que deseja excluir este promotor?")) return;
 
     try {
-      const response = await fetch(`https://zyntex-api.onrender.com/api/promotor/`, {
+      const response = await fetch(`http://localhost:8080/api/promotor/${id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        // Atualiza a lista localmente removendo o item deletado
-        setPromotores((prev) => prev.filter(p => p.id !== id));
+        setPromotores(prev => prev.filter(p => p.id !== id));
       } else {
+        console.error("Erro no DELETE:", response.status, await response.text());
         alert("Erro ao excluir o registro no servidor.");
       }
     } catch (error) {
@@ -107,7 +108,7 @@ export default function ListaPromotoresPage() {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Cabeçalho */}
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">Promotores</h1>
@@ -117,19 +118,19 @@ export default function ListaPromotoresPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        
+
         {/* Barra de Ferramentas */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative">
-              <Input 
-                type="search" 
-                placeholder="Buscar..." 
-                className="pl-4 w-60 h-[45px] bg-gray-50 border-gray-200" 
+              <Input
+                type="search"
+                placeholder="Buscar..."
+                className="pl-4 w-60 h-[45px] bg-gray-50 border-gray-200"
               />
             </div>
             <Button variant="ghost" className="h-[45px] bg-[#E8E8E8] w-[40px] hidden md:flex hover:bg-gray-200">
-              <Search className="h-4 w-4 text-black"/>
+              <Search className="h-4 w-4 text-black" />
             </Button>
             <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm">
               Pesquisa avançada
@@ -140,13 +141,13 @@ export default function ListaPromotoresPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="text-gray-700 group h-[45px]">
-                  Opções 
+                  Opções
                   <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 p-2">
                 {opcoes.map((opcao) => (
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     key={opcao}
                     onClick={() => setOpcaoSelecionada(opcao)}
                     className="flex items-center justify-between cursor-pointer py-2.5 px-3 focus:bg-gray-50"
@@ -178,10 +179,10 @@ export default function ListaPromotoresPage() {
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Nome ↓</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Cidade ↓</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Login ↓</TableHead>
-                <TableHead className="text-xs font-medium text-gray-600 uppercase">Tipo ↓</TableHead>
+                <TableHead className="text-xs font-medium text-gray-600 uppercase">Meta Mensal ↓</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Bateria ↓</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Sincronismo ↓</TableHead>
-                <TableHead className="text-right"></TableHead>                
+                <TableHead className="text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -201,16 +202,16 @@ export default function ListaPromotoresPage() {
                     <TableCell className="font-medium text-gray-700">{promotor.nome}</TableCell>
                     <TableCell className="text-gray-500 text-sm">{promotor.cidade || "-"}</TableCell>
                     <TableCell className="text-gray-500 text-sm">{promotor.login}</TableCell>
-                    <TableCell className="text-gray-500 text-sm">{promotor.tipo}</TableCell>
+                    <TableCell className="text-gray-500 text-sm">{promotor.metaMensal}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className={`text-sm font-medium ${promotor.bateria < 20 ? 'text-red-600' : 'text-gray-600'}`}>
                           {promotor.bateria}%
                         </span>
                         <div className="h-1.5 w-10 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${promotor.bateria < 20 ? 'bg-red-500' : 'bg-green-500'}`} 
-                            style={{ width: `${promotor.bateria}%` }} 
+                          <div
+                            className={`h-full ${promotor.bateria < 20 ? 'bg-red-500' : 'bg-green-500'}`}
+                            style={{ width: `${promotor.bateria}%` }}
                           />
                         </div>
                       </div>
@@ -224,10 +225,10 @@ export default function ListaPromotoresPage() {
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
                           <MapPin className="h-4 w-4" />
                         </Button>
-                        <Button 
+                        <Button
                           onClick={() => handleDelete(promotor.id)}
-                          variant="ghost" 
-                          size="icon" 
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
