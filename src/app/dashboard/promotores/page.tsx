@@ -82,7 +82,7 @@ export default function ListaPromotoresPage() {
 
   // DELETE: Excluir um promotor por ID
   const handleDelete = async (id: number) => {
-    console.log("Deletando promotor ID:", id); 
+    console.log("Deletando promotor ID:", id);
     if (!confirm("Tem certeza que deseja excluir este promotor?")) return;
 
     try {
@@ -187,7 +187,7 @@ export default function ListaPromotoresPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
+                <TableRow key="loading">
                   <TableCell colSpan={8} className="h-40 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Loader2 className="h-8 w-8 animate-spin text-[#2A362B]" />

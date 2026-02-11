@@ -182,7 +182,7 @@ export default function NovoPromotorPage() {
       }
     } catch (error) {
       console.error("Erro:", error)
-      alert("Erro ao criar promotor")
+      // alert("Erro ao criar promotor")
     } finally {
       setLoading(false)
     }

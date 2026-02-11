@@ -123,7 +123,7 @@ export default function ListaPromotoresPage() {
                                 <TableHead className="w-[50px]">
                                     <Checkbox className="translate-y-0.5 bg-white border-gray-300" />
                                 </TableHead>
-                                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">ID</TableHead>
+                                <TableHead className="min-w-50 font-montserrat font-medium text-xs text-gray-600 uppercase">ID</TableHead>
                                 <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Nome</TableHead>
                                 <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Rotas</TableHead>
                             </TableRow>

@@ -1,13 +1,13 @@
 "use client" // Adicionei use client para o menu funcionar (useState)
 
 import * as React from "react"
-import { 
-  Search, 
-  Plus, 
-  ChevronDown, 
-  Pencil, 
-  MapPin, 
-  Trash2, 
+import {
+  Search,
+  Plus,
+  ChevronDown,
+  Pencil,
+  MapPin,
+  Trash2,
   Check // Importei o Check
 } from "lucide-react"
 
@@ -41,7 +41,7 @@ import {
 
 // Ajustei o MOCK para ter todos os campos das colunas novas
 const rotas = [
-  { id: 1, descricao: "Rota A",  },
+  { id: 1, descricao: "Rota A", },
 ]
 
 export default function RotaPage() {
@@ -54,26 +54,26 @@ export default function RotaPage() {
 
   return (
     <div className="space-y-6">
-      
+
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">Rota</h1>
 
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        
+
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          
+
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative">
-              <Input 
-                type="search" 
-                placeholder="Buscar..." 
-                className="pl-4 w-60 h-[45px] bg-gray-50 border-gray-200" 
+              <Input
+                type="search"
+                placeholder="Buscar..."
+                className="pl-4 w-60 h-[45px] bg-gray-50 border-gray-200"
               />
             </div>
-            <Button variant="ghost" className="relative flex items-center justify-center h-[45px] bg-[#E8E8E8] w-[40px] font-medium hidden md:flex hover:bg-gray-200">
-              <Search className="absolute h-4 w-4 text-black"/>
+            <Button variant="ghost" className="relative items-center justify-center h-[45px] bg-[#E8E8E8] w-[40px] font-medium hidden md:flex hover:bg-gray-200">
+              <Search className="absolute h-4 w-4 text-black" />
             </Button>
             <p className="text-black font-kamerik font-bold hidden md:flex cursor-pointer hover:underline">
               Pesquisa avançada
@@ -81,18 +81,18 @@ export default function RotaPage() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="text-gray-700 group h-[45px] data-[state=open]:bg-gray-50">
-                  Opções 
+                  Opções
                   <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
-              
+
               <DropdownMenuContent align="end" className="w-64 p-2 font-montserrat">
                 {opcoes.map((opcao) => (
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     key={opcao}
                     onClick={() => setOpcaoSelecionada(opcao)}
                     className="flex items-center justify-between cursor-pointer py-2.5 px-3 focus:bg-gray-50"
@@ -127,7 +127,7 @@ export default function RotaPage() {
                 </TableHead>
                 <TableHead className="min-w-[300px] font-montserrat font-medium text-xs text-gray-600 uppercase">ID</TableHead>
                 <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase">Descrição ↓</TableHead>
-                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase text-right"></TableHead>                
+                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -140,8 +140,8 @@ export default function RotaPage() {
                   <TableCell className="font-medium text-gray-700">
                     {rotas.id}
                   </TableCell>
-                  
-                 
+
+
                   <TableCell className="font-medium text-gray-700">
                     {rotas.descricao}
                   </TableCell>
@@ -172,7 +172,7 @@ export default function RotaPage() {
               <PaginationItem>
                 <PaginationPrevious href="#" className="text-gray-500 hover:text-[#2A362B]" />
               </PaginationItem>
-              
+
               <PaginationItem>
                 <PaginationLink href="#" isActive className="bg-[#2A362B] text-white hover:bg-[#1f2920] hover:text-white rounded-md">1</PaginationLink>
               </PaginationItem>
@@ -182,11 +182,11 @@ export default function RotaPage() {
               <PaginationItem>
                 <PaginationLink href="#" className="text-gray-600 hover:text-[#2A362B]">3</PaginationLink>
               </PaginationItem>
-              
+
               <PaginationItem>
                 <PaginationEllipsis className="text-gray-400" />
               </PaginationItem>
-              
+
               <PaginationItem>
                 <PaginationLink href="#" className="text-gray-600 hover:text-[#2A362B]">12</PaginationLink>
               </PaginationItem>
