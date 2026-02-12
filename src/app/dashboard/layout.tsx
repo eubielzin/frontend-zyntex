@@ -8,7 +8,7 @@ import { DashboardHeader as Header } from "../../components/layout/header"
 
 // import { isAuthenticated } from "@/auth/auth"; // TODO: Descomentar quando tiver auth
 // import { redirect } from "next/navigation";
-
+export const dynamic = 'force-static'
 export default async function DashboardLayout({
   children,
 }: Readonly<{
