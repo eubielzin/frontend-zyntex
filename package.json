@@ -7,7 +7,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint .",
     "commit": "git-cz",
     "prepare": "husky"
   },
@@ -65,7 +65,7 @@
     "@types/react-dom": "19.2.3",
     "commitizen": "^4.3.1",
     "conventional-changelog-conventionalcommits": "^9.1.0",
-    "eslint": "^9",
+    "eslint": "^8.57.0",
     "eslint-config-next": "16.1.6",
     "husky": "^9.1.7",
     "inquirer": "^13.2.2",
@@ -75,7 +75,6 @@
     "typescript": "^5.9.2"
   },
   "resolutions": {
-    "@commitlint/cz-commitlint/inquirer": "^13.2.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3"
   }
