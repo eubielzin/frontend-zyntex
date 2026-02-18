@@ -10,8 +10,6 @@ import { useParams, useRouter } from "next/navigation"
 
 // --- Interfaces ---
 interface Supervisor { id: number; username: string }
-interface Rota { id: number; nome: string }
-
 interface FormData {
   nome: string; sexo: string; supervisorId: number | "";
   telefone: string; salario: string; metaMensal: string; observacao: string;
@@ -50,6 +48,27 @@ export default function EditarPromotorPage() {
     endereco: { logradouro: "", tipoLogradouro: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "", cep: "", referencia: "" }
   });
 
+  // --- MÁSCARA DE TELEFONE ---
+  const aplicarMascaraTelefone = (valor: string) => {
+    valor = valor.replace(/\D/g, "");
+    valor = valor.replace(/^(\d{2})(\d)/g, "($1) $2");
+    valor = valor.replace(/(\d)(\d{4})$/, "$1-$2");
+    return valor.substring(0, 15);
+  };
+
+  // --- MISSÃO: CAPTURAR BATERIA AUTOMATICAMENTE ---
+  useEffect(() => {
+    const capturarBateria = async () => {
+      try {
+        if ('getBattery' in navigator) {
+          const battery: any = await (navigator as any).getBattery();
+          setFormData(prev => ({ ...prev, bateria: Math.round(battery.level * 100) }));
+        }
+      } catch (err) { console.error("Erro bateria", err); }
+    };
+    capturarBateria();
+  }, []);
+
   // 1. Carregar dados atuais do Promotor
   useEffect(() => {
     const fetchData = async () => {
@@ -62,15 +81,10 @@ export default function EditarPromotorPage() {
         if (promotorRes.ok) {
           const data = await promotorRes.json();
           setFormData({
-            nome: data.nome || "",
-            sexo: data.sexo || "",
-            supervisorId: data.supervisorId || "",
-            telefone: data.telefone || "",
+            ...data,
+            telefone: data.telefone ? aplicarMascaraTelefone(data.telefone) : "",
             salario: data.salario?.toString() || "",
             metaMensal: data.metaMensal?.toString() || "",
-            observacao: data.observacao || "",
-            bateria: data.bateria || 0,
-            endereco: data.endereco || formData.endereco
           });
         }
         if (supRes.ok) setSupervisores(await supRes.json());
@@ -109,11 +123,9 @@ export default function EditarPromotorPage() {
   const validarTelefone = (tel: string) => /^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/.test(tel);
 
   const handleSalvarAlteracoes = async () => {
-    let novosErros: { [key: string]: string } = {};
-    if (formData.telefone && !validarTelefone(formData.telefone)) novosErros.telefone = "Telefone inválido";
-    
-    if (Object.keys(novosErros).length > 0) {
-      setErrors(novosErros);
+    const telLimpo = formData.telefone.replace(/\D/g, "");
+    if (telLimpo.length < 10) {
+      setErrors({ telefone: "Número de telefone inválido" });
       setActiveTab("geral");
       return;
     }
@@ -122,6 +134,7 @@ export default function EditarPromotorPage() {
       setSaving(true);
       const dataToSend = {
         ...formData,
+        telefone: telLimpo,
         supervisorId: formData.supervisorId !== "" ? Number(formData.supervisorId) : null,
         salario: parseFloat(formData.salario.replace(',', '.')),
       };
@@ -137,7 +150,6 @@ export default function EditarPromotorPage() {
     finally { setSaving(false); }
   }
 
-  // Fechar dropdowns ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -170,11 +182,15 @@ export default function EditarPromotorPage() {
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-gray-800 mb-8 font-montserrat border-b pb-4">Informações gerais</h2>
             <div className="space-y-8 max-w-5xl">
-              
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Telefone</Label>
                 <div className="md:col-span-10 relative">
-                  <Input value={formData.telefone} onChange={(e) => setFormData({...formData, telefone: e.target.value})} placeholder="Exemplo: (98) 91234-1234" className={`h-11 pr-10 ${errors.telefone ? 'border-red-500' : ''}`} />
+                  <Input 
+                    value={formData.telefone} 
+                    onChange={(e) => setFormData({...formData, telefone: aplicarMascaraTelefone(e.target.value)})} 
+                    placeholder="Exemplo: (98) 91234-1234" 
+                    className={`h-11 pr-10 ${errors.telefone ? 'border-red-500' : ''}`} 
+                  />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {errors.telefone && <p className="text-red-500 text-[10px] mt-1 absolute">{errors.telefone}</p>}
                 </div>
@@ -241,7 +257,6 @@ export default function EditarPromotorPage() {
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-[#2A362B] mb-8 font-montserrat border-b pb-4">Endereço</h2>
             <div className="space-y-6 max-w-5xl">
-              
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">CEP</Label>
                 <div className="md:col-span-10 relative">
