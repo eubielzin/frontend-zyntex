@@ -30,6 +30,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+// Importações do AlertDialog
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface Promotor {
   id: number;
@@ -73,8 +85,6 @@ export default function ListaPromotoresPage() {
 
   // DELETE: Excluir um promotor por ID (Consumindo API oficial)
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este promotor?")) return;
-
     try {
       const response = await fetch(`https://zyntex-api.onrender.com/api/promotor/${id}`, {
         method: 'DELETE',
@@ -82,7 +92,6 @@ export default function ListaPromotoresPage() {
 
       if (response.ok) {
         setPromotores(prev => prev.filter(p => p.id !== id));
-        alert("Promotor removido com sucesso!");
       } else {
         const errorText = await response.text();
         console.error("Erro no DELETE:", response.status, errorText);
@@ -104,7 +113,7 @@ export default function ListaPromotoresPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">Promotores</h1>
+        <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight font-montserrat">Promotores</h1>
         <Badge variant="secondary" className="bg-[#BFD8C5] text-[#3E583D] hover:bg-green-100 px-3 py-1 rounded-full text-xs font-normal w-fit">
           {promotores.length} registros
         </Badge>
@@ -200,14 +209,13 @@ export default function ListaPromotoresPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{promotor.bateria}%</span>
                       <div className="h-1.5 w-10 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-green-500" style={{ width: `${promotor.bateria}%` }} />
+                        <div className={`h-full ${promotor.bateria > 20 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${promotor.bateria}%` }} />
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-gray-500 text-sm">{promotor.ultimo_sinc || "Nunca"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {/* BOTAO EDITAR - Redireciona para a página de edição */}
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
                         <Link href={`/dashboard/promotores/editar/${promotor.id}`}>
                           <Pencil className="h-4 w-4" />
@@ -218,15 +226,40 @@ export default function ListaPromotoresPage() {
                         <MapPin className="h-4 w-4" />
                       </Button>
 
-                      {/* BOTAO EXCLUIR */}
-                      <Button
-                        onClick={() => handleDelete(promotor.id)}
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {/* Card de Confirmação para Excluir */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="font-montserrat">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-[#2A362B]">
+                              Excluir Promotor?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Você tem certeza que deseja excluir o promotor <strong>{promotor.nome}</strong>? 
+                              Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="border-gray-200 text-gray-500">
+                              Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(promotor.id)}
+                              className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              Sim, excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
