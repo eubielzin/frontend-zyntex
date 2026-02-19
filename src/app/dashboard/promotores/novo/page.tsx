@@ -15,40 +15,35 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect, useRef } from "react"
-import { redirect } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 // --- Interfaces ---
 interface Supervisor { id: number; username: string }
-interface Rota { id: number; nome: string }
+interface Rota { 
+  id: number; 
+  descricao: string;
+  ativo: boolean;
+  idIntegracao: string;
+}
 
 interface FormData {
   email: string; senha: string; nome: string; sexo: string; supervisorId: number | "";
   telefone: string; salario: string; metaMensal: string; regional: string; observacao: string;
-  bateria: number; metaMensa: number;
+  bateria: number;
   endereco: {
     logradouro: string; tipoLogradouro: string; numero: string; complemento: string;
     bairro: string; cidade: string; estado: string; cep: string; referencia: string;
   }
 }
 
-// Siglas para o Enum do Back-end
 const ESTADOS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
   "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
   "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-const ROTAS_MOCK: Rota[] = [
-  { id: 101, nome: "11 - MATEUS SUPERMERCADOS - COHAMA" },
-  { id: 102, nome: "12 - MATEUS SUPERMERCADOS - RENASCENÇA" },
-  { id: 103, nome: "13 - MATEUS SUPERMERCADOS - CALHAU" },
-  { id: 104, nome: "14 - MATEUS SUPERMERCADOS - TURU" },
-  { id: 105, nome: "15 - MATEUS SUPERMERCADOS - COHATRAC" },
-  { id: 106, nome: "16 - MATEUS SUPERMERCADOS - CENTRO" },
-  { id: 107, nome: "17 - MATEUS SUPERMERCADOS - JARDIM ELDORADO" },
-];
-
 export default function NovoPromotorPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("login")
   const [supervisores, setSupervisores] = useState<Supervisor[]>([])
   const [rotasApi, setRotasApi] = useState<Rota[]>([])
@@ -71,7 +66,7 @@ export default function NovoPromotorPage() {
   const [formData, setFormData] = useState<FormData>({
     email: "", senha: "", nome: "", sexo: "", supervisorId: "",
     telefone: "", salario: "", metaMensal: "", regional: "", observacao: "",
-    bateria: 0, metaMensa: 0,
+    bateria: 0,
     endereco: {
       logradouro: "", tipoLogradouro: "", numero: "", complemento: "",
       bairro: "", cidade: "", estado: "", cep: "", referencia: ""
@@ -84,21 +79,14 @@ export default function NovoPromotorPage() {
       try {
         if ('getBattery' in navigator) {
           const battery: any = await (navigator as any).getBattery();
-          
-          // Função para atualizar o estado com o nível atual
           const updateBatteryInfo = () => {
             const nivel = Math.round(battery.level * 100);
             setFormData(prev => ({ ...prev, bateria: nivel }));
           };
-
-          updateBatteryInfo(); // Captura inicial
-
-          // Listeners para caso o nível mude enquanto o usuário está na página
+          updateBatteryInfo();
           battery.addEventListener('levelchange', updateBatteryInfo);
         }
-      } catch (error) {
-        console.error("Erro ao acessar API de bateria", error);
-      }
+      } catch (error) { console.error("Erro bateria", error); }
     };
     obterBateria();
   }, []);
@@ -138,7 +126,7 @@ export default function NovoPromotorPage() {
     if (aba === "login") {
       if (!formData.nome.trim()) novosErros.nome = "Campo obrigatório";
       if (!formData.email.trim()) novosErros.email = "Campo obrigatório";
-      else if (!validarEmail(formData.email)) novosErros.email = "Use provedores válidos (gmail, outlook, etc)";
+      else if (!validarEmail(formData.email)) novosErros.email = "Use provedores válidos";
       if (!formData.senha.trim()) novosErros.senha = "Campo obrigatório";
     }
     if (aba === "geral" && formData.telefone && !validarTelefone(formData.telefone)) novosErros.telefone = "Telefone inválido";
@@ -170,7 +158,7 @@ export default function NovoPromotorPage() {
       try {
         const [supRes, rotasRes] = await Promise.all([
           fetch("https://zyntex-api.onrender.com/api/usuario/supervisores"),
-          fetch("https://zyntex-api.onrender.com/api/promotor/rotas")
+          fetch("https://zyntex-api.onrender.com/api/rota") // URL Atualizada
         ]);
         if (supRes.ok) setSupervisores(await supRes.json());
         if (rotasRes.ok) setRotasApi(await rotasRes.json());
@@ -191,8 +179,13 @@ export default function NovoPromotorPage() {
     if (id === "cep") handleBuscaCEP(value);
   }
 
-  const todasAsRotas = [...ROTAS_MOCK, ...rotasApi];
-  const rotasFiltradas = todasAsRotas.filter(r => r.nome.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 3);
+  // --- FILTRO SEGURO PARA EVITAR ERRO DE 'UNDEFINED' ---
+const rotasFiltradas = rotasApi
+  .filter(r => 
+    r?.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  .filter(r => !rotasSelecionadas.includes(r.id))
+  .slice(0, 3);
 
   const handleSalvarPromtor = async () => {
     if (!validarCampos(activeTab)) return;
@@ -201,9 +194,9 @@ export default function NovoPromotorPage() {
       const dataToSend = {
         ...formData,
         supervisorId: formData.supervisorId !== "" ? Number(formData.supervisorId) : null,
-        salario: parseFloat(formData.salario.replace(',', '.')),
-        metaMensal: parseFloat(formData.metaMensal?.replace(',', '.') || "0"),
-        rotas: rotasSelecionadas 
+        salario: formData.salario, 
+        metaMensal: formData.metaMensal ? parseFloat(formData.metaMensal.replace(',', '.')) : 0,
+        rotasIds: rotasSelecionadas 
       };
 
       const response = await fetch("https://zyntex-api.onrender.com/api/promotor", {
@@ -214,25 +207,16 @@ export default function NovoPromotorPage() {
 
       if (response.ok) {
         setToastVisible(true);
-        setTimeout(() => {
-          setToastVisible(false);
-          redirect("/dashboard/promotores");
-        }, 2000);
+        setTimeout(() => router.push("/dashboard/promotores"), 2000);
       } else {
-        const errorData = await response.json();
-        alert(`Erro do servidor: ${errorData.message || 'Verifique os dados'}`);
+        alert("Erro ao salvar. Verifique os dados.");
       }
-    } catch (error) { 
-        console.error("Erro ao salvar", error);
-        alert("Não foi possível conectar à API.");
-    } finally { 
-        setLoading(false); 
-    }
+    } catch (error) { alert("Não foi possível conectar à API."); }
+    finally { setLoading(false); }
   }
 
   return (
     <div className="relative space-y-6">
-      {/* Toast de Sucesso */}
       {toastVisible && (
         <div className="fixed top-4 right-4 z-[999] bg-[#2A362B] text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="bg-green-500 rounded-full p-1"><ArrowRight className="h-4 w-4 text-white" /></div>
@@ -355,15 +339,15 @@ export default function NovoPromotorPage() {
                 <div className="md:col-span-10 space-y-3" ref={dropdownRotasRef}>
                   <div className="relative">
                     <div onClick={() => setIsRotasOpen(!isRotasOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 cursor-pointer bg-white pr-10 text-gray-400 text-sm">
-                      <span className="line-clamp-1">Adicione todas as rotas serão utilizadas pelo promotor</span>
+                      <span className="line-clamp-1">Clique para buscar rotas reais</span>
                       <ChevronDown className={`h-4 w-4 transition-transform ${isRotasOpen ? 'rotate-180' : ''}`} />
                     </div>
                     <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     {isRotasOpen && (
                       <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
-                        <div className="p-2 border-b"><Input placeholder="Pesquisar rota..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-9 text-xs" /></div>
+                        <div className="p-2 border-b"><Input placeholder="Pesquisar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-9 text-xs" /></div>
                         {rotasFiltradas.map(r => (
-                          <div key={r.id} onClick={() => {setRotasSelecionadas([...rotasSelecionadas, r.id]); setIsRotasOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat border-b last:border-0">{r.nome}</div>
+                          <div key={r.id} onClick={() => {setRotasSelecionadas([...rotasSelecionadas, r.id]); setIsRotasOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat border-b last:border-0">{r.descricao}</div>
                         ))}
                       </div>
                     )}
@@ -371,7 +355,7 @@ export default function NovoPromotorPage() {
                   <div className="flex flex-wrap gap-2">
                     {rotasSelecionadas.map(id => (
                       <div key={id} className="flex items-center gap-2 bg-[#E0E0E0] text-[#424242] px-3 py-1.5 rounded-md text-[11px] font-bold uppercase">
-                        {todasAsRotas.find(r => r.id === id)?.nome}
+                        {rotasApi.find(r => r.id === id)?.descricao}
                         <X className="h-3.5 w-3.5 cursor-pointer" onClick={() => setRotasSelecionadas(rotasSelecionadas.filter(rid => rid !== id))} />
                       </div>
                     ))}
@@ -408,7 +392,7 @@ export default function NovoPromotorPage() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="cep" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">CEP</Label>
                 <div className="md:col-span-10 relative">
-                  <Input id="cep" value={formData.endereco.cep} onChange={handleEnderecoChange} placeholder="Digite o CEP da localidade" className={`h-11 ${errors.cep ? 'border-red-500 text-red-500' : ''}`} />
+                  <Input id="cep" value={formData.endereco.cep} onChange={handleEnderecoChange} placeholder="Digite o CEP" className={`h-11 ${errors.cep ? 'border-red-500 text-red-500' : ''}`} />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {errors.cep && <p className="text-red-500 text-[10px] mt-1 absolute">{errors.cep}</p>}
                 </div>
@@ -416,32 +400,7 @@ export default function NovoPromotorPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="logradouro" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Logradouro</Label>
-                <div className="md:col-span-10 relative"><Input id="logradouro" value={formData.endereco.logradouro} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="tipoLogradouro" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Tipo de Logradouro</Label>
-                <div className="md:col-span-10 relative"><Input id="tipoLogradouro" value={formData.endereco.tipoLogradouro} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="numero" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Número</Label>
-                <div className="md:col-span-10 relative"><Input id="numero" value={formData.endereco.numero} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="bairro" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Bairro</Label>
-                <div className="md:col-span-10 relative"><Input id="bairro" value={formData.endereco.bairro} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="complemento" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Complemento</Label>
-                <div className="md:col-span-10 relative"><Input id="complemento" value={formData.endereco.complemento} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="cidade" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Cidade</Label>
-                <div className="md:col-span-10 relative"><Input id="cidade" value={formData.endereco.cidade} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
+                <div className="md:col-span-10 relative"><Input id="logradouro" value={formData.endereco.logradouro} onChange={handleEnderecoChange} className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
@@ -461,15 +420,10 @@ export default function NovoPromotorPage() {
                   )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="referencia" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Referência</Label>
-                <div className="md:col-span-10 relative"><Input id="referencia" value={formData.endereco.referencia} onChange={handleEnderecoChange} placeholder="Digite..." className="pr-10 h-11 pr-10" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-              </div>
             </div>
             
             <div className="flex justify-end mt-16 pt-6 border-t border-gray-50">
-              <Button onClick={handleSalvarPromtor} disabled={loading} className="bg-[#cf9d09] hover:bg-[#b88c08] text-white px-8 py-6 rounded-md font-montserrat text-sm font-medium shadow-none transition-colors">
+              <Button onClick={handleSalvarPromtor} disabled={loading} className="bg-[#cf9d09] hover:bg-[#b88c08] text-white px-8 py-6 rounded-md font-montserrat text-sm font-medium transition-colors shadow-none">
                 {loading ? "Salvando..." : "Salvar promotor"}
               </Button>
             </div>

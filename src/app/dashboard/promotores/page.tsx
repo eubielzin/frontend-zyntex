@@ -30,7 +30,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-// Importações do AlertDialog
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +56,7 @@ interface Promotor {
 export default function ListaPromotoresPage() {
   const [promotores, setPromotores] = React.useState<Promotor[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [exporting, setExporting] = React.useState(false); // Estado para o loading do excel
   const [termoBusca, setTermoBusca] = React.useState("");
   const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Visualizar endereço");
 
@@ -83,7 +83,30 @@ export default function ListaPromotoresPage() {
     }
   };
 
-  // DELETE: Excluir um promotor por ID (Consumindo API oficial)
+  const handleExportarDados = async () => {
+    try {
+      setExporting(true);
+      const response = await fetch("https://zyntex-api.onrender.com/api/promotor/exportar");
+      
+      if (!response.ok) throw new Error("Erro ao exportar");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `promotores_zyntex_${new Date().toLocaleDateString()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      alert("Erro ao gerar arquivo Excel.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
       const response = await fetch(`https://zyntex-api.onrender.com/api/promotor/${id}`, {
@@ -149,6 +172,7 @@ export default function ListaPromotoresPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="text-gray-700 group h-[45px]">
+                  {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Opções
                   <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>
@@ -157,7 +181,10 @@ export default function ListaPromotoresPage() {
                 {opcoes.map((opcao) => (
                   <DropdownMenuItem
                     key={opcao}
-                    onClick={() => setOpcaoSelecionada(opcao)}
+                    onClick={() => {
+                      setOpcaoSelecionada(opcao);
+                      if (opcao === "Exportar dados") handleExportarDados();
+                    }}
                     className="flex items-center justify-between cursor-pointer py-2.5 px-3 focus:bg-gray-50"
                   >
                     <span>{opcao}</span>
