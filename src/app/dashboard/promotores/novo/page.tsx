@@ -385,46 +385,112 @@ const rotasFiltradas = rotasApi
           </div>
         </TabsContent>
 
-        <TabsContent value="endereco" className="mt-0">
+<TabsContent value="endereco" className="mt-0 font-montserrat">
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-[#2A362B] mb-8 font-montserrat border-b pb-4">Endereço</h2>
-            <div className="space-y-8 max-w-5xl">
+            <div className="space-y-6 max-w-5xl">
+              
+              {/* CEP */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="cep" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">CEP</Label>
+                <Label htmlFor="cep" className="md:col-span-2 text-gray-600 font-medium text-sm">CEP</Label>
                 <div className="md:col-span-10 relative">
-                  <Input id="cep" value={formData.endereco.cep} onChange={handleEnderecoChange} placeholder="Digite o CEP" className={`h-11 ${errors.cep ? 'border-red-500 text-red-500' : ''}`} />
+                  <Input id="cep" value={formData.endereco.cep} onChange={handleEnderecoChange} placeholder="Digite o CEP da localidade" className={`h-11 pr-10 ${errors.cep ? 'border-red-500 text-red-500' : ''}`} />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {errors.cep && <p className="text-red-500 text-[10px] mt-1 absolute">{errors.cep}</p>}
                 </div>
               </div>
 
+              {/* Logradouro */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="logradouro" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Logradouro</Label>
-                <div className="md:col-span-10 relative"><Input id="logradouro" value={formData.endereco.logradouro} onChange={handleEnderecoChange} className="pr-10 h-11" /><Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
+                <Label htmlFor="logradouro" className="md:col-span-2 text-gray-600 font-medium text-sm">Logradouro</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="logradouro" value={formData.endereco.logradouro} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
               </div>
 
+              {/* Tipo de Logradouro */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Estado</Label>
+                <Label htmlFor="tipoLogradouro" className="md:col-span-2 text-gray-600 font-medium text-sm">Tipo de Logradouro</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="tipoLogradouro" value={formData.endereco.tipoLogradouro} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Número */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="numero" className="md:col-span-2 text-gray-600 font-medium text-sm">Número</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="numero" value={formData.endereco.numero} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Bairro */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="bairro" className="md:col-span-2 text-gray-600 font-medium text-sm">Bairro</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="bairro" value={formData.endereco.bairro} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Complemento */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="complemento" className="md:col-span-2 text-gray-600 font-medium text-sm">Complemento</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="complemento" value={formData.endereco.complemento} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Cidade */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="cidade" className="md:col-span-2 text-gray-600 font-medium text-sm">Cidade</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="cidade" value={formData.endereco.cidade} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Estado */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Estado</Label>
                 <div className="md:col-span-10 relative" ref={dropdownEstadoRef}>
                   <div onClick={() => setIsEstadoOpen(!isEstadoOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 cursor-pointer bg-white pr-10">
-                    <span className={`text-sm font-montserrat ${formData.endereco.estado ? 'text-gray-700' : 'text-gray-400'}`}>{formData.endereco.estado || "Selecione o estado..."}</span>
+                    <span className={`text-sm ${formData.endereco.estado ? 'text-gray-700' : 'text-gray-400'}`}>{formData.endereco.estado || "Digite..."}</span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isEstadoOpen ? 'rotate-180' : ''}`} />
                   </div>
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {isEstadoOpen && (
-                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-40 overflow-y-auto">
                       {ESTADOS_BR.map(uf => (
-                        <div key={uf} onClick={() => { setFormData(prev => ({ ...prev, endereco: { ...prev.endereco, estado: uf } })); setIsEstadoOpen(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat border-b last:border-0">{uf}</div>
+                        <div key={uf} onClick={() => { setFormData(prev => ({ ...prev, endereco: { ...prev.endereco, estado: uf } })); setIsEstadoOpen(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b last:border-0">{uf}</div>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Referência */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="referencia" className="md:col-span-2 text-gray-600 font-medium text-sm">Referência</Label>
+                <div className="md:col-span-10 relative">
+                  <Input id="referencia" value={formData.endereco.referencia} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
             </div>
             
             <div className="flex justify-end mt-16 pt-6 border-t border-gray-50">
-              <Button onClick={handleSalvarPromtor} disabled={loading} className="bg-[#cf9d09] hover:bg-[#b88c08] text-white px-8 py-6 rounded-md font-montserrat text-sm font-medium transition-colors shadow-none">
-                {loading ? "Salvando..." : "Salvar promotor"}
+              <Button 
+                onClick={handleSalvarPromtor} 
+                disabled={loading} 
+                className="bg-[#D1D5DB] hover:bg-gray-400 text-gray-600 px-8 py-6 rounded-md font-montserrat text-sm font-medium transition-colors shadow-none"
+              >
+                {loading ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
           </div>
