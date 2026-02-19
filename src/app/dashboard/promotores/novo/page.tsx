@@ -73,6 +73,12 @@ export default function NovoPromotorPage() {
     }
   })
 
+  const formatarMoeda = (valor: string) => {
+    let v = valor.replace(/\D/g, "");
+    const options = { minimumFractionDigits: 2 };
+    const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
+    return v === "" ? "" : result;
+  };
   // --- MISSÃO: CAPTURAR BATERIA AUTOMATICAMENTE ---
   useEffect(() => {
     const obterBateria = async () => {
@@ -198,6 +204,12 @@ const rotasFiltradas = rotasApi
         metaMensal: formData.metaMensal ? parseFloat(formData.metaMensal.replace(',', '.')) : 0,
         rotasIds: rotasSelecionadas 
       };
+      const formatarMoeda = (valor: string) => {
+          let v = valor.replace(/\D/g, "");
+          const options = { minimumFractionDigits: 2 };
+          const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
+          return v === "" ? "" : result;
+        };
 
       const response = await fetch("https://zyntex-api.onrender.com/api/promotor", {
         method: "POST",
@@ -363,10 +375,29 @@ const rotasFiltradas = rotasApi
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="salario" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Salário</Label>
+               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Salário</Label>
                 <div className="md:col-span-10 relative">
-                  <Input id="salario" value={formData.salario} onChange={handleInputChange} placeholder="Digite o salário" className="pr-10 h-11" />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-montserrat">R$</div>
+                  <Input 
+                    value={formData.salario} 
+                    onChange={(e) => setFormData({...formData, salario: formatarMoeda(e.target.value)})} 
+                    className="h-11 pl-10 pr-10" 
+                  />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+              {/* META MENSAL (Corrigido o Label e a Variável) */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Meta Mensal</Label>
+                <div className="md:col-span-10 relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-montserrat">R$</div>
+                  <Input 
+                    value={formData.metaMensal} 
+                    onChange={(e) => setFormData({...formData, metaMensal: formatarMoeda(e.target.value)})} 
+                    className="h-11 pl-10 pr-10" 
+                  />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
@@ -385,7 +416,7 @@ const rotasFiltradas = rotasApi
           </div>
         </TabsContent>
 
-<TabsContent value="endereco" className="mt-0 font-montserrat">
+        <TabsContent value="endereco" className="mt-0 font-montserrat">
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-[#2A362B] mb-8 font-montserrat border-b pb-4">Endereço</h2>
             <div className="space-y-6 max-w-5xl">
