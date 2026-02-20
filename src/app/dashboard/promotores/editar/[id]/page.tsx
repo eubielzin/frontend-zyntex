@@ -75,7 +75,6 @@ export default function EditarPromotorPage() {
     return v.substring(0, 9);
   };
 
-  // --- MISSÃO: CAPTURAR BATERIA AUTOMATICAMENTE ---
   useEffect(() => {
     const capturarBateria = async () => {
       try {
@@ -88,7 +87,6 @@ export default function EditarPromotorPage() {
     capturarBateria();
   }, []);
 
-  // 1. Carregar dados atuais do Promotor
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -145,13 +143,12 @@ export default function EditarPromotorPage() {
         ...formData,
         telefone: formData.telefone.replace(/\D/g, ""),
         supervisorId: formData.supervisorId !== "" ? Number(formData.supervisorId) : null,
-        // Limpeza de máscaras para o Java
         salario: formData.salario.replace(/\./g, '').replace(',', '.'),
         metaMensal: formData.metaMensal.replace(/\./g, ''), 
       };
 
       const response = await fetch(`https://zyntex-api.onrender.com/api/promotor/${id}`, {
-        method: "PATCH", // Alterado para PATCH conforme solicitado anteriormente
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend)
       });
