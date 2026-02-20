@@ -74,15 +74,6 @@ export default function NovoPromotorPage() {
     }
   })
 
-<<<<<<< HEAD
-  const formatarMoeda = (valor: string) => {
-    let v = valor.replace(/\D/g, "");
-    const options = { minimumFractionDigits: 2 };
-    const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
-    return v === "" ? "" : result;
-  };
-  // --- MISSÃO: CAPTURAR BATERIA AUTOMATICAMENTE ---
-=======
     // --- MÁSCARAS DE FORMATAÇÃO ---
     const formatarNumeroInteiro = (valor: string) => {
       let v = valor.replace(/\D/g, "");
@@ -110,7 +101,6 @@ export default function NovoPromotorPage() {
         return v.substring(0, 9);
       };
 
->>>>>>> fix/correcao-gabriel
   useEffect(() => {
     const obterBateria = async () => {
       try {
@@ -236,12 +226,6 @@ const rotasFiltradas = rotasApi
         metaMensal: formData.metaMensal.replace(/\./g, ""), 
         rotasIds: rotasSelecionadas 
       };
-      const formatarMoeda = (valor: string) => {
-          let v = valor.replace(/\D/g, "");
-          const options = { minimumFractionDigits: 2 };
-          const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
-          return v === "" ? "" : result;
-        };
 
       const response = await fetch("https://zyntex-api.onrender.com/api/promotor", {
         method: "POST",
@@ -437,16 +421,9 @@ const rotasFiltradas = rotasApi
                 </div>
               </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Salário</Label>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="salario" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Salário</Label>
                 <div className="md:col-span-10 relative">
-<<<<<<< HEAD
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-montserrat">R$</div>
-                  <Input 
-                    value={formData.salario} 
-                    onChange={(e) => setFormData({...formData, salario: formatarMoeda(e.target.value)})} 
-                    className="h-11 pl-10 pr-10" 
-=======
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-montserrat">R$</div>
                   <Input 
                     id="salario" 
@@ -454,23 +431,11 @@ const rotasFiltradas = rotasApi
                     onChange={(e) => setFormData({...formData, salario: formatarMoeda(e.target.value)})} 
                     placeholder="0,00" 
                     className="pl-8 pr-10 h-11" 
->>>>>>> fix/correcao-gabriel
                   />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
 
-<<<<<<< HEAD
-              {/* META MENSAL (Corrigido o Label e a Variável) */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Meta Mensal</Label>
-                <div className="md:col-span-10 relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-montserrat">R$</div>
-                  <Input 
-                    value={formData.metaMensal} 
-                    onChange={(e) => setFormData({...formData, metaMensal: formatarMoeda(e.target.value)})} 
-                    className="h-11 pl-10 pr-10" 
-=======
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="metaMensal" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Meta Mensal</Label>
                 <div className="md:col-span-10 relative">
@@ -480,7 +445,6 @@ const rotasFiltradas = rotasApi
                     onChange={(e) => setFormData({...formData, metaMensal: formatarNumeroInteiro(e.target.value)})} 
                     placeholder="0.000" 
                     className="pr-10 h-11" 
->>>>>>> fix/correcao-gabriel
                   />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
