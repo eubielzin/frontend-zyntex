@@ -60,7 +60,7 @@ export default function ListaPromotoresPage() {
   const [termoBusca, setTermoBusca] = React.useState("");
   const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Visualizar endereço");
 
-  const opcoes = ["Visualizar última posição", "Visualizar endereço", "Exportar dados", "Importar dados"];
+  const opcoes = ["Exportar dados", "Importar dados"];
 
   // --- FUNÇÕES DE API ---
 
@@ -148,23 +148,18 @@ export default function ListaPromotoresPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B] transition-colors" />              
               <Input
-                type="search"
-                placeholder="Buscar pelo nome..."
-                value={termoBusca}
-                onChange={(e) => setTermoBusca(e.target.value)}
-                className="pl-4 w-60 h-[45px] bg-gray-50 border-gray-200"
-              />
+                    type="search"
+                    placeholder="Buscar pelo nome..."
+                    value={termoBusca}
+                    onChange={(e) => setTermoBusca(e.target.value)}
+                    // Aumentamos a pl-10 para o texto não ficar em cima do ícone
+                    className="pl-10 w-64 h-[45px] bg-gray-50 border-gray-200 focus:bg-white focus:ring-1 focus:ring-[#2A362B] transition-all"
+                  />
             </div>
-            <Button 
-              onClick={() => fetchPromotores(termoBusca)}
-              variant="ghost" 
-              className="h-[45px] bg-[#E8E8E8] w-[40px] hidden md:flex hover:bg-gray-200"
-            >
-              <Search className="h-4 w-4 text-black" />
-            </Button>
             <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => setTermoBusca("")}>
-              Limpar busca
+              Busca Avançada
             </p>
           </div>
 
@@ -225,13 +220,26 @@ export default function ListaPromotoresPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-[#2A362B] mx-auto" />
                   </TableCell>
                 </TableRow>
+              ) : promotores.length === 0 ? (
+                /* ESTA É A ÚNICA ADIÇÃO: MENSAGEM QUANDO VAZIO */
+                <TableRow>
+                  <TableCell colSpan={8} className="h-40 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 text-gray-500 font-montserrat">
+                      <Search className="h-8 w-8 text-gray-300" />
+                      <p className="text-lg font-medium">Promotor não encontrado</p>
+                      <p className="text-sm">Verifique a ortografia ou tente um nome diferente.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : promotores.map((promotor) => (
                 <TableRow key={promotor.id} className="hover:bg-gray-50/50">
                   <TableCell><Checkbox className="border-gray-300" /></TableCell>
                   <TableCell className="font-medium text-gray-700">{promotor.nome}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{promotor.cidade || "-"}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{promotor.username}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{promotor.metaMensal}</TableCell>
+                  <TableCell className="text-gray-700 text-sm font-medium">
+                    {new Intl.NumberFormat('de-DE').format(promotor.metaMensal)}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{promotor.bateria}%</span>

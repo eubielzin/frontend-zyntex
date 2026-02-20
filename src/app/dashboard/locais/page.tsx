@@ -49,8 +49,6 @@ export default function ListaPromotoresPage() {
   const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Visualizar endereço");
 
   const opcoes = [
-    "Visualizar última posição",
-    "Visualizar endereço",
     "Exportar dados",
     "Importar dados"
   ];
