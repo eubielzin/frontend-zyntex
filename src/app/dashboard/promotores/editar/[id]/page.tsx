@@ -11,8 +11,8 @@ import { useParams, useRouter } from "next/navigation"
 // --- Interfaces ---
 interface Supervisor { id: number; username: string }
 interface FormData {
-  sexo: string; supervisorId: number | "";
-  telefone: string; salario: string; observacao: string; metaMensal: string;
+  nome: string; sexo: string; supervisorId: number | "";
+  telefone: string; salario: string; metaMensal: string; observacao: string;
   bateria: number;
   endereco: {
     logradouro: string; tipoLogradouro: string; numero: string; complemento: string;
@@ -42,8 +42,8 @@ export default function EditarPromotorPage() {
   const dropdownEstadoRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
-    sexo: "", supervisorId: "",
-    telefone: "", salario: "", observacao: "", metaMensal: "",
+    nome: "", sexo: "", supervisorId: "",
+    telefone: "", salario: "", metaMensal: "", observacao: "",
     bateria: 0,
     endereco: { logradouro: "", tipoLogradouro: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "", cep: "", referencia: "" }
   });
@@ -97,28 +97,21 @@ export default function EditarPromotorPage() {
 
         if (promotorRes.ok) {
           const data = await promotorRes.json();
-
-          console.log("Dados do promotor:", data);
-          
-          // Preenchimento Automático: Injetando os dados nos campos
           setFormData({
-            sexo: data.sexo || "",
-            supervisorId: data.supervisorId || "",
+            ...data,
             telefone: data.telefone ? aplicarMascaraTelefone(data.telefone) : "",
             salario: data.salario ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(data.salario) : "",
             metaMensal: data.metaMensal ? new Intl.NumberFormat('de-DE').format(data.metaMensal) : "",
           });
         }
         if (supRes.ok) setSupervisores(await supRes.json());
-      } catch (error) { 
-        console.error("Erro ao carregar dados", error) 
-      } finally { 
-        setLoading(false) 
-      }
+      } catch (error) { console.error("Erro ao carregar dados", error) }
+      finally { setLoading(false) }
     }
     if (id) fetchData();
   }, [id]);
 
+  // 2. Lógica ViaCEP para Edição
   const handleBuscaCEP = async (cepDigitado: string) => {
     const cepLimpo = cepDigitado.replace(/\D/g, "");
     if (cepLimpo.length === 8) {
@@ -137,6 +130,7 @@ export default function EditarPromotorPage() {
               tipoLogradouro: data.logradouro.split(" ")[0] || "" 
             }
           }));
+          setErrors(prev => ({ ...prev, cep: "" }));
         }
       } catch (error) { console.error(error) }
     }
@@ -164,7 +158,6 @@ export default function EditarPromotorPage() {
     } catch (error) { alert("Erro de conexão."); }
     finally { setSaving(false); }
   }
-};
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -177,7 +170,7 @@ export default function EditarPromotorPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (loading) return <div className="p-20 text-center font-montserrat text-[#2A362B]">Carregando dados antigos do promotor...</div>
+  if (loading) return <div className="p-20 text-center font-montserrat text-[#2A362B]">Carregando dados do promotor...</div>
 
   return (
     <div className="relative space-y-6">
@@ -198,7 +191,6 @@ export default function EditarPromotorPage() {
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-gray-800 mb-8 font-montserrat border-b pb-4">Informações gerais</h2>
             <div className="space-y-8 max-w-5xl">
-              
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Telefone</Label>
                 <div className="md:col-span-10 relative">
@@ -311,7 +303,6 @@ export default function EditarPromotorPage() {
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-[#2A362B] mb-8 font-montserrat border-b pb-4">Endereço</h2>
             <div className="space-y-6 max-w-5xl">
-              
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">CEP</Label>
                 <div className="md:col-span-10 relative">
@@ -348,7 +339,7 @@ export default function EditarPromotorPage() {
                         )}
                       </div>
                     ) : (
-                      <Input value={(formData.endereco as any)[field]} onChange={(e) => setFormData({...formData, endereco: {...formData.endereco, [field]: e.target.value}})} className="h-11 pr-10" />
+                      <Input value={(formData.endereco as any)[field]} onChange={(e) => setFormData({...formData, endereco: {...formData.endereco, [field]: e.target.value}})} placeholder="Digite.." className="h-11 pr-10" />
                     )}
                     <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </div>
@@ -366,3 +357,4 @@ export default function EditarPromotorPage() {
       </Tabs>
     </div>
   )
+}
