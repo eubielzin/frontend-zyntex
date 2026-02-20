@@ -6,7 +6,7 @@ import {
   ChevronLeft,
   ArrowRight,
   ChevronDown,
-  Check // Adicionado para a ênfase no supervisor
+  Check
 } from "lucide-react"
 import Link from "next/link"
 
@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 
+const COR_SELECAO = "#cf9d09";
 // --- Interfaces ---
 interface Supervisor { id: number; username: string }
 interface Rota { 
@@ -74,33 +75,34 @@ export default function NovoPromotorPage() {
     }
   })
 
-    // --- MÁSCARAS DE FORMATAÇÃO ---
-    const formatarNumeroInteiro = (valor: string) => {
-      let v = valor.replace(/\D/g, "");
-      if (v === "") return "";
-      return new Intl.NumberFormat('de-DE').format(parseInt(v));
-    };
+  // --- MÁSCARAS DE FORMATAÇÃO ---
+  const formatarNumeroInteiro = (valor: string) => {
+    let v = valor.replace(/\D/g, "");
+    if (v === "") return "";
+    return new Intl.NumberFormat('de-DE').format(parseInt(v));
+  };
 
-    const formatarMoeda = (valor: string) => {
-        let v = valor.replace(/\D/g, "");
-        const options = { minimumFractionDigits: 2 };
-        const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
-        return v === "" ? "" : result;
-      };
+  const formatarMoeda = (valor: string) => {
+    let v = valor.replace(/\D/g, "");
+    const options = { minimumFractionDigits: 2 };
+    const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
+    return v === "" ? "" : result;
+  };
 
-      const formatarTelefone = (valor: string) => {
-        let v = valor.replace(/\D/g, "");
-        v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
-        v = v.replace(/(\d)(\d{4})$/, "$1-$2");
-        return v.substring(0, 15);
-      };
+  const formatarTelefone = (valor: string) => {
+    let v = valor.replace(/\D/g, "");
+    v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+    v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+    return v.substring(0, 15);
+  };
 
-      const formatarCEP = (valor: string) => {
-        let v = valor.replace(/\D/g, "");
-        v = v.replace(/^(\d{5})(\d)/, "$1-$2");
-        return v.substring(0, 9);
-      };
+  const formatarCEP = (valor: string) => {
+    let v = valor.replace(/\D/g, "");
+    v = v.replace(/^(\d{5})(\d)/, "$1-$2");
+    return v.substring(0, 9);
+  };
 
+  // --- MISSÃO: CAPTURAR BATERIA AUTOMATICAMENTE ---
   useEffect(() => {
     const obterBateria = async () => {
       try {
@@ -118,6 +120,7 @@ export default function NovoPromotorPage() {
     obterBateria();
   }, []);
 
+  // --- Lógica de Busca de CEP ---
   const handleBuscaCEP = async (cepDigitado: string) => {
     const cepLimpo = cepDigitado.replace(/\D/g, "");
     if (cepLimpo.length === 8) {
@@ -205,23 +208,14 @@ export default function NovoPromotorPage() {
     if (id === "cep") handleBuscaCEP(value);
   }
 
-  
-const rotasFiltradas = rotasApi
-  .filter(r => 
-    r?.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .filter(r => !rotasSelecionadas.includes(r.id))
-  .slice(0, 3);
-
   const handleSalvarPromtor = async () => {
     if (!validarCampos(activeTab)) return;
     try {
       setLoading(true);
       const dataToSend = {
         ...formData,
-        telefone: formData.telefone.replace(/\D/g, ""), // Limpeza para o banco
+        telefone: formData.telefone.replace(/\D/g, ""), 
         supervisorId: formData.supervisorId !== "" ? Number(formData.supervisorId) : null,
-        // Limpeza de máscaras para evitar Erro 400 no Java
         salario: formData.salario.replace(/\./g, "").replace(",", "."), 
         metaMensal: formData.metaMensal.replace(/\./g, ""), 
         rotasIds: rotasSelecionadas 
@@ -350,7 +344,7 @@ const rotasFiltradas = rotasApi
                 </div>
               </div>
 
-              {/* SUPERVISOR COM ÊNFASE MAIOR */}
+              {/* SUPERVISOR COM ÊNFASE */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Supervisor</Label>
                 <div className="md:col-span-10 relative" ref={dropdownSupRef}>
@@ -359,6 +353,7 @@ const rotasFiltradas = rotasApi
                     className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
                       formData.supervisorId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
                     }`}
+                    
                   >
                     <span className={`text-sm font-montserrat ${formData.supervisorId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
                       {formData.supervisorId 
@@ -377,9 +372,7 @@ const rotasFiltradas = rotasApi
                             key={sup.id} 
                             onClick={() => {setFormData({...formData, supervisorId: sup.id}); setIsSupOpen(false)}} 
                             className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
-                              isSelected 
-                                ? 'bg-green-50 text-[#2A362B] font-bold' 
-                                : 'hover:bg-gray-50 text-gray-700'
+                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
                             }`}
                           >
                             <span>{sup.username}</span>
@@ -392,34 +385,6 @@ const rotasFiltradas = rotasApi
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm mt-3">Rotas</Label>
-                <div className="md:col-span-10 space-y-3" ref={dropdownRotasRef}>
-                  <div className="relative">
-                    <div onClick={() => setIsRotasOpen(!isRotasOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 cursor-pointer bg-white pr-10 text-gray-400 text-sm">
-                      <span className="line-clamp-1">Clique para buscar rotas reais</span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${isRotasOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                    <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    {isRotasOpen && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
-                        <div className="p-2 border-b"><Input placeholder="Pesquisar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-9 text-xs" /></div>
-                        {rotasFiltradas.map(r => (
-                          <div key={r.id} onClick={() => {setRotasSelecionadas([...rotasSelecionadas, r.id]); setIsRotasOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat border-b last:border-0">{r.descricao}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {rotasSelecionadas.map(id => (
-                      <div key={id} className="flex items-center gap-2 bg-[#E0E0E0] text-[#424242] px-3 py-1.5 rounded-md text-[11px] font-bold uppercase">
-                        {rotasApi.find(r => r.id === id)?.descricao}
-                        <X className="h-3.5 w-3.5 cursor-pointer" onClick={() => setRotasSelecionadas(rotasSelecionadas.filter(rid => rid !== id))} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="salario" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Salário</Label>
@@ -496,14 +461,13 @@ const rotasFiltradas = rotasApi
                   </div>
                 </div>
               ))}
-
             </div>
             
             <div className="flex justify-end mt-16 pt-6 border-t border-gray-50">
               <Button 
                 onClick={handleSalvarPromtor} 
                 disabled={loading} 
-                className="bg-[#D1D5DB] hover:bg-gray-400 text-gray-600 px-8 py-6 rounded-md font-montserrat text-sm font-medium transition-colors shadow-none"
+                className="bg-[#cf9d09] hover:bg-[#b88c08] text-white px-8 py-6 rounded-md font-montserrat text-sm font-medium transition-colors shadow-none"
               >
                 {loading ? "Salvando..." : "Salvar alterações"}
               </Button>
