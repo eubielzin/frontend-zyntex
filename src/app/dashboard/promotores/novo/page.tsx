@@ -5,7 +5,8 @@ import {
   Camera,
   ChevronLeft,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  Check // Adicionado para a ênfase no supervisor
 } from "lucide-react"
 import Link from "next/link"
 
@@ -73,6 +74,7 @@ export default function NovoPromotorPage() {
     }
   })
 
+<<<<<<< HEAD
   const formatarMoeda = (valor: string) => {
     let v = valor.replace(/\D/g, "");
     const options = { minimumFractionDigits: 2 };
@@ -80,6 +82,35 @@ export default function NovoPromotorPage() {
     return v === "" ? "" : result;
   };
   // --- MISSÃO: CAPTURAR BATERIA AUTOMATICAMENTE ---
+=======
+    // --- MÁSCARAS DE FORMATAÇÃO ---
+    const formatarNumeroInteiro = (valor: string) => {
+      let v = valor.replace(/\D/g, "");
+      if (v === "") return "";
+      return new Intl.NumberFormat('de-DE').format(parseInt(v));
+    };
+
+    const formatarMoeda = (valor: string) => {
+        let v = valor.replace(/\D/g, "");
+        const options = { minimumFractionDigits: 2 };
+        const result = new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
+        return v === "" ? "" : result;
+      };
+
+      const formatarTelefone = (valor: string) => {
+        let v = valor.replace(/\D/g, "");
+        v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+        v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+        return v.substring(0, 15);
+      };
+
+      const formatarCEP = (valor: string) => {
+        let v = valor.replace(/\D/g, "");
+        v = v.replace(/^(\d{5})(\d)/, "$1-$2");
+        return v.substring(0, 9);
+      };
+
+>>>>>>> fix/correcao-gabriel
   useEffect(() => {
     const obterBateria = async () => {
       try {
@@ -97,7 +128,6 @@ export default function NovoPromotorPage() {
     obterBateria();
   }, []);
 
-  // --- Lógica de Busca de CEP ---
   const handleBuscaCEP = async (cepDigitado: string) => {
     const cepLimpo = cepDigitado.replace(/\D/g, "");
     if (cepLimpo.length === 8) {
@@ -164,7 +194,7 @@ export default function NovoPromotorPage() {
       try {
         const [supRes, rotasRes] = await Promise.all([
           fetch("https://zyntex-api.onrender.com/api/usuario/supervisores"),
-          fetch("https://zyntex-api.onrender.com/api/rota") // URL Atualizada
+          fetch("https://zyntex-api.onrender.com/api/rota") 
         ]);
         if (supRes.ok) setSupervisores(await supRes.json());
         if (rotasRes.ok) setRotasApi(await rotasRes.json());
@@ -185,7 +215,7 @@ export default function NovoPromotorPage() {
     if (id === "cep") handleBuscaCEP(value);
   }
 
-  // --- FILTRO SEGURO PARA EVITAR ERRO DE 'UNDEFINED' ---
+  
 const rotasFiltradas = rotasApi
   .filter(r => 
     r?.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -199,9 +229,11 @@ const rotasFiltradas = rotasApi
       setLoading(true);
       const dataToSend = {
         ...formData,
+        telefone: formData.telefone.replace(/\D/g, ""), // Limpeza para o banco
         supervisorId: formData.supervisorId !== "" ? Number(formData.supervisorId) : null,
-        salario: formData.salario, 
-        metaMensal: formData.metaMensal ? parseFloat(formData.metaMensal.replace(',', '.')) : 0,
+        // Limpeza de máscaras para evitar Erro 400 no Java
+        salario: formData.salario.replace(/\./g, "").replace(",", "."), 
+        metaMensal: formData.metaMensal.replace(/\./g, ""), 
         rotasIds: rotasSelecionadas 
       };
       const formatarMoeda = (valor: string) => {
@@ -238,7 +270,7 @@ const rotasFiltradas = rotasApi
 
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild className="h-8 w-8">
-          <Link href="/dashboard"><ChevronLeft className="h-5 w-5 text-gray-500" /></Link>
+          <Link href="/dashboard/promotores"><ChevronLeft className="h-5 w-5 text-gray-500" /></Link>
         </Button>
         <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Adicionar Promotores</h1>
       </div>
@@ -305,10 +337,16 @@ const rotasFiltradas = rotasApi
             <div className="space-y-8 max-w-5xl">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="telefone" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Telefone</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="telefone" value={formData.telefone} onChange={handleInputChange} placeholder="Exemplo: (98) 91234-1234" className={`pr-10 h-11 ${errors.telefone ? 'border-red-500' : ''}`} />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
+                  <div className="md:col-span-10 relative">
+                      <Input 
+                        id="telefone" 
+                        value={formData.telefone} 
+                        onChange={(e) => setFormData({...formData, telefone: formatarTelefone(e.target.value)})} 
+                        placeholder="(00) 00000-0000" 
+                        className="pr-10 h-11" 
+                      />
+                      <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
@@ -328,19 +366,43 @@ const rotasFiltradas = rotasApi
                 </div>
               </div>
 
+              {/* SUPERVISOR COM ÊNFASE MAIOR */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Supervisor</Label>
                 <div className="md:col-span-10 relative" ref={dropdownSupRef}>
-                  <div onClick={() => setIsSupOpen(!isSupOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 cursor-pointer bg-white pr-10">
-                    <span className={`text-sm font-montserrat ${formData.supervisorId ? 'text-gray-700' : 'text-gray-400'}`}>{formData.supervisorId ? supervisores.find(s => s.id === Number(formData.supervisorId))?.username : "Selecione o supervisor"}</span>
+                  <div 
+                    onClick={() => setIsSupOpen(!isSupOpen)} 
+                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
+                      formData.supervisorId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
+                    }`}
+                  >
+                    <span className={`text-sm font-montserrat ${formData.supervisorId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
+                      {formData.supervisorId 
+                        ? supervisores.find(s => s.id === Number(formData.supervisorId))?.username 
+                        : "Selecione o supervisor"}
+                    </span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSupOpen ? 'rotate-180' : ''}`} />
                   </div>
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {isSupOpen && (
-                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto">
-                      {supervisores.map(sup => (
-                        <div key={sup.id} onClick={() => {setFormData({...formData, supervisorId: sup.id}); setIsSupOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat border-b last:border-0">{sup.username}</div>
-                      ))}
+                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                      {supervisores.map(sup => {
+                        const isSelected = formData.supervisorId === sup.id;
+                        return (
+                          <div 
+                            key={sup.id} 
+                            onClick={() => {setFormData({...formData, supervisorId: sup.id}); setIsSupOpen(false)}} 
+                            className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
+                              isSelected 
+                                ? 'bg-green-50 text-[#2A362B] font-bold' 
+                                : 'hover:bg-gray-50 text-gray-700'
+                            }`}
+                          >
+                            <span>{sup.username}</span>
+                            {isSelected && <Check className="h-4 w-4 text-[#2A362B]" />}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -378,16 +440,27 @@ const rotasFiltradas = rotasApi
                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Salário</Label>
                 <div className="md:col-span-10 relative">
+<<<<<<< HEAD
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-montserrat">R$</div>
                   <Input 
                     value={formData.salario} 
                     onChange={(e) => setFormData({...formData, salario: formatarMoeda(e.target.value)})} 
                     className="h-11 pl-10 pr-10" 
+=======
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-montserrat">R$</div>
+                  <Input 
+                    id="salario" 
+                    value={formData.salario} 
+                    onChange={(e) => setFormData({...formData, salario: formatarMoeda(e.target.value)})} 
+                    placeholder="0,00" 
+                    className="pl-8 pr-10 h-11" 
+>>>>>>> fix/correcao-gabriel
                   />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
 
+<<<<<<< HEAD
               {/* META MENSAL (Corrigido o Label e a Variável) */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Meta Mensal</Label>
@@ -397,6 +470,17 @@ const rotasFiltradas = rotasApi
                     value={formData.metaMensal} 
                     onChange={(e) => setFormData({...formData, metaMensal: formatarMoeda(e.target.value)})} 
                     className="h-11 pl-10 pr-10" 
+=======
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label htmlFor="metaMensal" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Meta Mensal</Label>
+                <div className="md:col-span-10 relative">
+                  <Input 
+                    id="metaMensal" 
+                    value={formData.metaMensal} 
+                    onChange={(e) => setFormData({...formData, metaMensal: formatarNumeroInteiro(e.target.value)})} 
+                    placeholder="0.000" 
+                    className="pr-10 h-11" 
+>>>>>>> fix/correcao-gabriel
                   />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
@@ -421,97 +505,33 @@ const rotasFiltradas = rotasApi
             <h2 className="text-lg font-semibold text-[#2A362B] mb-8 font-montserrat border-b pb-4">Endereço</h2>
             <div className="space-y-6 max-w-5xl">
               
-              {/* CEP */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="cep" className="md:col-span-2 text-gray-600 font-medium text-sm">CEP</Label>
                 <div className="md:col-span-10 relative">
-                  <Input id="cep" value={formData.endereco.cep} onChange={handleEnderecoChange} placeholder="Digite o CEP da localidade" className={`h-11 pr-10 ${errors.cep ? 'border-red-500 text-red-500' : ''}`} />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  {errors.cep && <p className="text-red-500 text-[10px] mt-1 absolute">{errors.cep}</p>}
-                </div>
-              </div>
-
-              {/* Logradouro */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="logradouro" className="md:col-span-2 text-gray-600 font-medium text-sm">Logradouro</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="logradouro" value={formData.endereco.logradouro} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Tipo de Logradouro */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="tipoLogradouro" className="md:col-span-2 text-gray-600 font-medium text-sm">Tipo de Logradouro</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="tipoLogradouro" value={formData.endereco.tipoLogradouro} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
+                  <Input 
+                    id="cep" 
+                    value={formData.endereco.cep} 
+                    onChange={(e) => {
+                      const masked = formatarCEP(e.target.value);
+                      setFormData({...formData, endereco: {...formData.endereco, cep: masked}});
+                      handleBuscaCEP(masked);
+                    }} 
+                    placeholder="00000-000" 
+                    className="h-11 pr-10" 
+                  />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
 
-              {/* Número */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="numero" className="md:col-span-2 text-gray-600 font-medium text-sm">Número</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="numero" value={formData.endereco.numero} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Bairro */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="bairro" className="md:col-span-2 text-gray-600 font-medium text-sm">Bairro</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="bairro" value={formData.endereco.bairro} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Complemento */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="complemento" className="md:col-span-2 text-gray-600 font-medium text-sm">Complemento</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="complemento" value={formData.endereco.complemento} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Cidade */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="cidade" className="md:col-span-2 text-gray-600 font-medium text-sm">Cidade</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="cidade" value={formData.endereco.cidade} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Estado */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Estado</Label>
-                <div className="md:col-span-10 relative" ref={dropdownEstadoRef}>
-                  <div onClick={() => setIsEstadoOpen(!isEstadoOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 cursor-pointer bg-white pr-10">
-                    <span className={`text-sm ${formData.endereco.estado ? 'text-gray-700' : 'text-gray-400'}`}>{formData.endereco.estado || "Digite..."}</span>
-                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isEstadoOpen ? 'rotate-180' : ''}`} />
+              {["logradouro", "tipoLogradouro", "numero", "bairro", "complemento", "cidade", "estado", "referencia"].map((field) => (
+                <div key={field} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <Label className="md:col-span-2 text-gray-600 font-medium capitalize">{field.replace(/([A-Z])/g, ' $1')}</Label>
+                  <div className="md:col-span-10 relative">
+                    <Input value={(formData.endereco as any)[field]} onChange={(e) => setFormData({...formData, endereco: {...formData.endereco, [field]: e.target.value}})} placeholder="Digite..." className="h-11 pr-10" />
+                    <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </div>
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  {isEstadoOpen && (
-                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-40 overflow-y-auto">
-                      {ESTADOS_BR.map(uf => (
-                        <div key={uf} onClick={() => { setFormData(prev => ({ ...prev, endereco: { ...prev.endereco, estado: uf } })); setIsEstadoOpen(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b last:border-0">{uf}</div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
-
-              {/* Referência */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label htmlFor="referencia" className="md:col-span-2 text-gray-600 font-medium text-sm">Referência</Label>
-                <div className="md:col-span-10 relative">
-                  <Input id="referencia" value={formData.endereco.referencia} onChange={handleEnderecoChange} placeholder="Digite..." className="h-11 pr-10" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
+              ))}
 
             </div>
             
