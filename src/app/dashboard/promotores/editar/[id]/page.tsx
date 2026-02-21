@@ -246,7 +246,7 @@ export default function EditarPromotorPage() {
                             key={sup.id} 
                             onClick={() => {setFormData({...formData, supervisorId: sup.id}); setIsSupOpen(false)}} 
                             className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
-                              isSelected ? 'bg-green-50 text-[#2A362B] font-bold' : 'hover:bg-gray-50 text-gray-700'
+                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
                             }`}
                           >
                             <span>{sup.username}</span>
