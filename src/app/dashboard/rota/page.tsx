@@ -40,6 +40,20 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
+// --- VARIÁVEL DE COR PADRONIZADA ---
+const COR_SELECAO = "#cf9d09"; 
 
 interface Rota {
   id: number;
@@ -60,13 +74,13 @@ export default function RotaPage() {
     try {
       setLoading(true);
       const url = busca 
-        ? `https://zyntex-api.onrender.com/api/rota?descricao=${busca}` 
+        ? `https://zyntex-api.onrender.com/api/rota?descricao=${encodeURIComponent(busca)}` 
         : `https://zyntex-api.onrender.com/api/rota`;
       
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setRotas(data);
+        setRotas(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Erro API:", error);
@@ -75,11 +89,25 @@ export default function RotaPage() {
     }
   };
 
-  React.useEffect(() => {
-    fetchRotas();
-  }, []);
+  // --- LÓGICA DE EXCLUSÃO (ESTILO PROMOTORES) ---
+  const handleExcluirRota = async (id: number) => {
+    try {
+      const response = await fetch(`https://zyntex-api.onrender.com/api/rota/${id}`, {
+        method: "DELETE",
+      });
 
-  // Debounce para pesquisa automática
+      if (response.ok) {
+        // Atualização automática da lista
+        setRotas((prev) => prev.filter((rota) => rota.id !== id));
+      } else {
+        alert("Erro ao excluir a rota no servidor.");
+      }
+    } catch (error) {
+      console.error("Erro ao deletar:", error);
+      alert("Não foi possível conectar à API no Render.");
+    }
+  };
+
   React.useEffect(() => {
     const timer = setTimeout(() => fetchRotas(termoBusca), 300);
     return () => clearTimeout(timer);
@@ -94,13 +122,12 @@ export default function RotaPage() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           
-          {/* BUSCA UNIFICADA ESTILO PROMOTORES */}
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative group">
               {loading ? (
                 <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
               ) : (
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B] transition-colors" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B]" />
               )}
               <Input
                 type="search"
@@ -110,9 +137,8 @@ export default function RotaPage() {
                 className="pl-10 w-60 h-[45px] bg-gray-50 border-gray-200 focus:bg-white focus:ring-1 focus:ring-[#2A362B] transition-all"
               />
             </div>
-            
             <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => setTermoBusca("")}>
-              Pesquisa avançada
+              Limpar busca
             </p>
           </div>
 
@@ -139,8 +165,9 @@ export default function RotaPage() {
             </DropdownMenu>
 
             <Button 
-            className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2 px-6"
-            onClick={() => router.push("/dashboard/rota/novo")}
+              className="h-[45px] bg-[#2E3D2A] text-white gap-2 px-6 hover:brightness-95 transition-all shadow-none font-bold"
+              
+              onClick={() => router.push("/dashboard/rota/novo")}
             >
               <Plus className="h-4 w-4" />
               Adicionar Rota
@@ -148,37 +175,70 @@ export default function RotaPage() {
           </div>
         </div>
 
-        {/* TABELA COM POSICIONAMENTO ORIGINAL E LÓGICA DE ERRO */}
-        <div className="rounded-md border border-gray-100">
+        <div className="rounded-md border border-gray-100 overflow-hidden">
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead className="w-[50px]"><Checkbox className="border-gray-300" /></TableHead>
-                <TableHead className="min-w-[300px] font-montserrat font-medium text-xs text-gray-600 uppercase">ID</TableHead>
-                <TableHead className="font-montserrat font-medium text-xs text-gray-600 uppercase">Descrição ↓</TableHead>
+                <TableHead className="min-w-[300px] font-semibold text-xs text-gray-500 uppercase">ID</TableHead>
+                <TableHead className="font-semibold text-xs text-gray-500 uppercase">Descrição ↓</TableHead>
                 <TableHead className="text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && rotas.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-32 text-center text-gray-400">Carregando rotas...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-32 text-center text-gray-400 italic">Buscando rotas...</TableCell></TableRow>
               ) : rotas.length > 0 ? (
                 rotas.map((rota) => (
-                  <TableRow key={rota.id} className="hover:bg-gray-50/50">
+                  <TableRow key={rota.id} className="hover:bg-gray-50/50 transition-colors">
                     <TableCell><Checkbox className="border-gray-300" /></TableCell>
                     <TableCell className="font-medium text-gray-700">{rota.id}</TableCell>
-                    <TableCell className="font-medium text-gray-700">{rota.descricao}</TableCell>
+                    <TableCell className="font-medium text-[#2A362B]">{rota.descricao}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50"><MapPin className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
+                          <MapPin className="h-4 w-4" />
+                        </Button>
+
+                        {/* CARD DE CONFIRMAÇÃO (AlertDialog) IGUAL AO DE PROMOTORES */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="font-montserrat">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-[#2A362B]">Excluir Rota?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Você tem certeza que deseja excluir a rota <strong>{rota.descricao}</strong>?
+                                Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="border-gray-200 text-gray-500">Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleExcluirRota(rota.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Sim, excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
                       </div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
-                /* ESTADO DE PESQUISA NÃO ENCONTRADA */
                 <TableRow>
                   <TableCell colSpan={4} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
@@ -193,18 +253,6 @@ export default function RotaPage() {
             </TableBody>
           </Table>
         </div>
-
-        {rotas.length > 0 && (
-          <div className="mt-6 flex justify-center">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
-                <PaginationItem><PaginationLink href="#" isActive className="bg-[#2A362B]">1</PaginationLink></PaginationItem>
-                <PaginationItem><PaginationNext href="#" /></PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
       </div>
     </div>
   )
