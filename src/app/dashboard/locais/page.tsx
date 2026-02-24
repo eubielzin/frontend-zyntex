@@ -1,4 +1,4 @@
-"use client" // Adicionei use client para o menu funcionar (useState)
+"use client"
 
 import * as React from "react"
 import {
@@ -8,8 +8,10 @@ import {
   Pencil,
   MapPin,
   Trash2,
-  Check // Importei o Check
+  Check, 
+  Loader2 
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,19 +41,81 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 
-// Ajustei o MOCK para ter todos os campos das colunas novas
-const locais = [
-  { id: 1, descricao: "Camino MT", razaoSocial: "CAMINO LTD", apelido: "Camino Norte", nomeGerente: "Silva", regional: "Norte" },
-]
+// Importações do Modal de Confirmação (AlertDialog)
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-export default function ListaPromotoresPage() {
-  // Estado para controlar qual opção está selecionada no menu
-  const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Visualizar endereço");
+interface Local {
+  id: number;
+  descricao: string;
+  razaoSocial?: string; 
+  apelido?: string;
+  nomeGerente?: string;
+  regional?: string;
+}
 
-  const opcoes = [
-    "Exportar dados",
-    "Importar dados"
-  ];
+export default function ListaLocaisPage() {
+  const router = useRouter();
+  
+  const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Exportar dados");
+  const opcoes = ["Exportar dados", "Importar dados"];
+
+  // Estados
+  const [locais, setLocais] = React.useState<Local[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [busca, setBusca] = React.useState("");
+
+  React.useEffect(() => {
+    carregarLocais();
+  }, []);
+
+  const carregarLocais = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("https://zyntex-api.onrender.com/api/local");
+      if (response.ok) {
+        const data = await response.json();
+        setLocais(data);
+      } else {
+        console.error("Erro ao buscar locais da API.");
+      }
+    } catch (error) {
+      console.error("Erro de conexão", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletar = async (id: number) => {
+    try {
+      const response = await fetch(`https://zyntex-api.onrender.com/api/local/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        setLocais(locais.filter(local => local.id !== id));
+      } else {
+        alert("Erro ao excluir o local no servidor.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão ao tentar excluir.");
+    }
+  };
+
+  const locaisFiltrados = locais.filter(local => 
+    local.descricao?.toLowerCase().includes(busca.toLowerCase()) ||
+    local.razaoSocial?.toLowerCase().includes(busca.toLowerCase()) ||
+    local.apelido?.toLowerCase().includes(busca.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -59,7 +123,7 @@ export default function ListaPromotoresPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">Locais</h1>
         <Badge variant="secondary" className="bg-[#BFD8C5] text-[#3E583D] hover:bg-green-100 px-3 py-1 rounded-full text-xs font-normal w-fit">
-          163 registros
+          {loading ? "Carregando..." : `${locaisFiltrados.length} registros`}
         </Badge>
       </div>
 
@@ -68,19 +132,24 @@ export default function ListaPromotoresPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
 
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-            <div className="relative">
-              <Input
-                type="search"
-                placeholder="Buscar..."
-                className="pl-4 w-60 h-[45px] bg-gray-50 border-gray-200"
-              />
+            <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                    type="search"
+                    placeholder="Buscar pela descrição..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
+                />
             </div>
-            <Button variant="ghost" className="relative flex items-center justify-center h-[45px] bg-[#E8E8E8] w-[40px] font-medium hidden md:flex hover:bg-gray-200">
-              <Search className="absolute h-4 w-4 text-black" />
-            </Button>
-            <p className="text-black font-kamerik font-bold hidden md:flex cursor-pointer hover:underline">
-              Pesquisa avançada
-            </p>
+            {busca && (
+                <p 
+                    onClick={() => setBusca("")} 
+                    className="text-black font-bold cursor-pointer hover:underline text-sm whitespace-nowrap"
+                >
+                    Limpar busca
+                </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
@@ -103,7 +172,6 @@ export default function ListaPromotoresPage() {
                     <span className={opcaoSelecionada === opcao ? "font-medium text-[#2A362B]" : "text-gray-600"}>
                       {opcao}
                     </span>
-                    {/* Renderiza o Check apenas se for a opção selecionada */}
                     {opcaoSelecionada === opcao && (
                       <Check className="h-4 w-4 text-[#2A362B]" />
                     )}
@@ -111,16 +179,17 @@ export default function ListaPromotoresPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* --------------------------- */}
 
-            <Button className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
+            <Button 
+              onClick={() => router.push("/dashboard/locais/novo")} 
+              className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2"
+            >
               <Plus className="h-4 w-4" />
               Adicionar Local
             </Button>
           </div>
         </div>
 
-        {/* TABELA AJUSTADA (Colunas alinhadas com cabeçalho) */}
         <div className="rounded-md border border-gray-100">
           <Table>
             <TableHeader className="bg-gray-50">
@@ -137,75 +206,95 @@ export default function ListaPromotoresPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {locais.map((local) => (
-                <TableRow key={local.id} className="hover:bg-gray-50/50">
-                  <TableCell>
-                    <Checkbox className="translate-y-0.5 border-gray-300" />
-                  </TableCell>
-
-
-                  <TableCell className="font-medium text-gray-700">
-                    {local.descricao}
-                  </TableCell>
-
-
-                  <TableCell className="text-gray-500 text-sm">
-                    {local.razaoSocial}
-                  </TableCell>
-
-
-                  <TableCell className="text-gray-500 text-sm">
-                    {local.apelido}
-                  </TableCell>
-
-                  <TableCell className="text-gray-500 text-sm">
-                    {local.nomeGerente}
-                  </TableCell>
-
-                  <TableCell className="text-gray-500 text-sm">
-                    {local.regional}
-                  </TableCell>
-
-                
-
-                  {/* <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium text-sm ${promotor.bateria < 20 ? 'text-red-600' : 'text-gray-600'}`}>
-                        {promotor.bateria}%
-                      </span>
-                      <div className="h-1.5 w-10 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${promotor.bateria < 20 ? 'bg-red-500' : 'bg-green-500'}`} 
-                          style={{ width: `${promotor.bateria}%` }} 
-                        />
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell className="text-gray-500 text-sm">
-                    {promotor.ultimo_sinc}
-                  </TableCell>
-
-                  <TableCell className="text-gray-500 text-sm">
-                    {promotor.ultimo_envio}
-                  </TableCell> */}
-
-
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
-                        <MapPin className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : locaisFiltrados.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-gray-500 font-montserrat">
+                    Nenhum local encontrado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                locaisFiltrados.map((local) => (
+                  <TableRow key={local.id} className="hover:bg-gray-50/50">
+                    <TableCell>
+                      <Checkbox className="translate-y-0.5 border-gray-300" />
+                    </TableCell>
+
+                    <TableCell className="font-medium text-gray-700">
+                      {local.descricao}
+                    </TableCell>
+
+                    <TableCell className="text-gray-500 text-sm">
+                      {local.razaoSocial || "-"}
+                    </TableCell>
+
+                    <TableCell className="text-gray-500 text-sm">
+                      {local.apelido || "-"}
+                    </TableCell>
+
+                    <TableCell className="text-gray-500 text-sm">
+                      {local.nomeGerente || "-"}
+                    </TableCell>
+
+                    <TableCell className="text-gray-500 text-sm">
+                      {local.regional || "-"}
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => router.push(`/dashboard/locais/editar/${local.id}`)}
+                          className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
+                          <MapPin className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="font-montserrat">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-[#2A362B]">Excluir Local?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Você tem certeza que deseja excluir o local <strong>{local.descricao}</strong>?
+                                Esta ação não pode ser desfeita e pode afetar as rotas vinculadas a ele.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="border-gray-200 text-gray-500">Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeletar(local.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Sim, excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

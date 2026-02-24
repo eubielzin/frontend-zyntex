@@ -14,7 +14,7 @@ export default function LoginPage(){
         <section className="h-[100vh] flex flex-row bg-amber-50 text-black">
             <div className="w-[50%] h-full bg-[url('/images/banner.png')] bg-cover bg-center"></div>
             <div className="w-full h-full bg max-w-[550px] px-4 flex flex-col mx-auto justify-center">
-                <h1 className="font-bold font-rubik text-3xl">Entra</h1>
+                <h1 className="font-bold font-rubik text-3xl">Entrar</h1>
                 <p className="font-montserrat font-normal text-base">
                     Não possui uma conta?{" "}
                     <Link href="/registro" className="underline">

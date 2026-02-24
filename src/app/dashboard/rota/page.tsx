@@ -32,15 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -52,7 +43,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-// --- VARIÁVEL DE COR PADRONIZADA ---
 const COR_SELECAO = "#cf9d09"; 
 
 interface Rota {
@@ -67,17 +57,12 @@ export default function RotaPage() {
   const [termoBusca, setTermoBusca] = React.useState("");
   const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Visualizar endereço");
 
-  const opcoes = ["expor dados", "importa dados"];
+  const opcoes = ["Exportar dados", "Importar dados"];
 
-  // --- BUSCA REAL DA API ---
-  const fetchRotas = async (busca = "") => {
+  const fetchRotas = async () => {
     try {
       setLoading(true);
-      const url = busca 
-        ? `https://zyntex-api.onrender.com/api/rota?descricao=${encodeURIComponent(busca)}` 
-        : `https://zyntex-api.onrender.com/api/rota`;
-      
-      const response = await fetch(url);
+      const response = await fetch(`https://zyntex-api.onrender.com/api/rota`);
       if (response.ok) {
         const data = await response.json();
         setRotas(Array.isArray(data) ? data : []);
@@ -89,7 +74,10 @@ export default function RotaPage() {
     }
   };
 
-  // --- LÓGICA DE EXCLUSÃO (ESTILO PROMOTORES) ---
+  React.useEffect(() => {
+    fetchRotas();
+  }, []);
+
   const handleExcluirRota = async (id: number) => {
     try {
       const response = await fetch(`https://zyntex-api.onrender.com/api/rota/${id}`, {
@@ -97,7 +85,6 @@ export default function RotaPage() {
       });
 
       if (response.ok) {
-        // Atualização automática da lista
         setRotas((prev) => prev.filter((rota) => rota.id !== id));
       } else {
         alert("Erro ao excluir a rota no servidor.");
@@ -108,10 +95,44 @@ export default function RotaPage() {
     }
   };
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => fetchRotas(termoBusca), 300);
-    return () => clearTimeout(timer);
-  }, [termoBusca]);
+  const rotasFiltradas = rotas.filter(rota => 
+    rota.descricao?.toLowerCase().includes(termoBusca.toLowerCase()) ||
+    rota.id?.toString().includes(termoBusca)
+  );
+
+  // --- FUNÇÃO DE EXPORTAR PARA CSV ---
+  const handleExportarCSV = () => {
+    if (rotasFiltradas.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    // Cria o cabeçalho do arquivo
+    const cabecalhos = ["ID", "Descrição"];
+    
+    // Mapeia os dados das linhas
+    const linhas = rotasFiltradas.map(rota => [
+      rota.id, 
+      `"${rota.descricao}"` // Aspas para evitar quebra de linha ou vírgulas na descrição
+    ]);
+
+    // Junta tudo no formato CSV
+    const conteudoCSV = [
+      cabecalhos.join(","),
+      ...linhas.map(linha => linha.join(","))
+    ].join("\n");
+
+    // Cria o arquivo e força o download
+    const blob = new Blob([conteudoCSV], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "lista_de_rotas.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setOpcaoSelecionada("Exportar dados"); // Atualiza o check no menu
+  };
 
   return (
     <div className="space-y-6 font-montserrat">
@@ -124,11 +145,7 @@ export default function RotaPage() {
           
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative group">
-              {loading ? (
-                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
-              ) : (
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B]" />
-              )}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B]" />
               <Input
                 type="search"
                 placeholder="Buscar pela descrição..."
@@ -138,7 +155,7 @@ export default function RotaPage() {
               />
             </div>
             <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => setTermoBusca("")}>
-              Limpar busca
+              Busca Avançada
             </p>
           </div>
 
@@ -151,22 +168,33 @@ export default function RotaPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 p-2">
-                {opcoes.map((opcao) => (
-                  <DropdownMenuItem
-                    key={opcao}
-                    onClick={() => setOpcaoSelecionada(opcao)}
-                    className="flex items-center justify-between cursor-pointer py-2.5 px-3 focus:bg-gray-50"
-                  >
-                    <span className={opcaoSelecionada === opcao ? "font-bold text-[#2A362B]" : "text-gray-600"}>{opcao}</span>
-                    {opcaoSelecionada === opcao && <Check className="h-4 w-4 text-[#2A362B]" />}
-                  </DropdownMenuItem>
-                ))}
+                
+                {/* Clique em Exportar dados aciona a função de baixar planilha */}
+                <DropdownMenuItem
+                  onClick={handleExportarCSV}
+                  className="flex items-center justify-between cursor-pointer py-2.5 px-3 focus:bg-gray-50"
+                >
+                  <span className={opcaoSelecionada === "Exportar dados" ? "font-bold text-[#2A362B]" : "text-gray-600"}>
+                    Exportar dados
+                  </span>
+                  {opcaoSelecionada === "Exportar dados" && <Check className="h-4 w-4 text-[#2A362B]" />}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => setOpcaoSelecionada("Importar dados")}
+                  className="flex items-center justify-between cursor-pointer py-2.5 px-3 focus:bg-gray-50"
+                >
+                  <span className={opcaoSelecionada === "Importar dados" ? "font-bold text-[#2A362B]" : "text-gray-600"}>
+                    Importar dados
+                  </span>
+                  {opcaoSelecionada === "Importar dados" && <Check className="h-4 w-4 text-[#2A362B]" />}
+                </DropdownMenuItem>
+
               </DropdownMenuContent>
             </DropdownMenu>
 
             <Button 
               className="h-[45px] bg-[#2E3D2A] text-white gap-2 px-6 hover:brightness-95 transition-all shadow-none font-bold"
-              
               onClick={() => router.push("/dashboard/rota/novo")}
             >
               <Plus className="h-4 w-4" />
@@ -186,24 +214,28 @@ export default function RotaPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && rotas.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-32 text-center text-gray-400 italic">Buscando rotas...</TableCell></TableRow>
-              ) : rotas.length > 0 ? (
-                rotas.map((rota) => (
+              {loading ? (
+                <TableRow><TableCell colSpan={4} className="h-32 text-center text-gray-400 italic"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+              ) : rotasFiltradas.length > 0 ? (
+                rotasFiltradas.map((rota) => (
                   <TableRow key={rota.id} className="hover:bg-gray-50/50 transition-colors">
                     <TableCell><Checkbox className="border-gray-300" /></TableCell>
                     <TableCell className="font-medium text-gray-700">{rota.id}</TableCell>
                     <TableCell className="font-medium text-[#2A362B]">{rota.descricao}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => router.push(`/dashboard/rota/editar/${rota.id}`)} 
+                          className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50"
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
                           <MapPin className="h-4 w-4" />
                         </Button>
 
-                        {/* CARD DE CONFIRMAÇÃO (AlertDialog) IGUAL AO DE PROMOTORES */}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
