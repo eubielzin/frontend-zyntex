@@ -91,27 +91,39 @@ export default function ListaIndustriasPage() {
     return base.endsWith("/api") ? `${base}/industria` : `${base}/api/industria`;
   };
 
-  // BUSCA COM PAGINAÇÃO E FILTRO
+  // BUSCA COM PAGINAÇÃO E FILTRO AJUSTADA
   const fetchIndustrias = async (page: number, termoBusca: string = "") => {
     try {
         setLoading(true);
-        // Se houver rota de busca no Java, ajuste aqui (ex: /buscar?nome=X)
-        let url = `${getApiUrl()}/paged?page=${page}&size=10`;
+        
         if (termoBusca) {
-            // Exemplo de como passaria a busca para o pageable no backend
-            // url = `${getApiUrl()}/buscar?termo=${encodeURIComponent(termoBusca)}&page=${page}&size=10`;
-        }
-
-        const response = await fetch(url);
-        if (response.ok) {
-            const data = await response.json();
-            // Mapeando a estrutura Pageable do Spring Boot
-            setIndustrias(data.content || []);
-            setTotalPages(data.totalPages || 1);
-            setCurrentPage(data.number || 0);
-            setTotalElements(data.totalElements || 0);
+            // Quando tem busca, chama o endpoint que retorna a List direta
+            const url = `${getApiUrl()}/buscar?nome=${encodeURIComponent(termoBusca)}`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setIndustrias(Array.isArray(data) ? data : []);
+                setTotalPages(1); // Garante que terá 1 página na exibição
+                setCurrentPage(0);
+                setTotalElements(Array.isArray(data) ? data.length : 0);
+            } else {
+                console.error("Erro ao buscar indústrias.");
+            }
         } else {
-            console.error("Erro ao carregar indústrias da API");
+            // Quando a busca está vazia, usa a paginação padrão
+            const url = `${getApiUrl()}/paged?page=${page}&size=10`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setIndustrias(data.content || []);
+                setTotalPages(data.totalPages || 1);
+                setCurrentPage(data.number || 0);
+                setTotalElements(data.totalElements || 0);
+            } else {
+                console.error("Erro ao carregar indústrias paginadas da API");
+            }
         }
     } catch (error) {
         console.error("Erro de conexão", error);
@@ -141,6 +153,8 @@ export default function ListaIndustriasPage() {
             setCurrentPage(currentPage - 1);
         } else {
             setTotalElements(prev => Math.max(0, prev - 1));
+            // Força um recarregamento para repor os itens da lista
+            fetchIndustrias(currentPage, busca);
         }
       } else {
         alert("Não foi possível excluir a indústria. Verifique se ela possui vínculos ativos com outros módulos.");
@@ -177,6 +191,7 @@ export default function ListaIndustriasPage() {
     if (!dataOriginal) return "-";
     try {
         const data = new Date(dataOriginal);
+        data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
         return new Intl.DateTimeFormat('pt-BR').format(data);
     } catch (e) {
         return dataOriginal;
@@ -194,7 +209,7 @@ export default function ListaIndustriasPage() {
               href="#" 
               onClick={(e) => { e.preventDefault(); setCurrentPage(i); }}
               isActive={currentPage === i} 
-              className={currentPage === i ? "bg-[#2A362B] text-white hover:bg-[#1f2920] hover:text-white rounded-md" : "text-gray-600 hover:text-[#2A362B]"}
+              className={currentPage === i ? "bg-[#2A362B] text-white hover:bg-[#1f2920] hover:text-white rounded-md" : "text-gray-600 hover:text-[#2A362B] cursor-pointer"}
             >
               {i + 1}
             </PaginationLink>
@@ -325,7 +340,7 @@ export default function ListaIndustriasPage() {
                     industrias.map((industria) => (
                         <TableRow key={industria.id} className="hover:bg-gray-50/50 transition-colors">
                         <TableCell><Checkbox className="translate-y-0.5 border-gray-300" /></TableCell>
-                        <TableCell className="font-medium text-gray-700">{industria.identificadorAlternativo || industria.id}</TableCell>
+                        <TableCell className="font-medium text-gray-700">{industria.nomeIndustria || industria.identificadorAlternativo || industria.id}</TableCell>
                         <TableCell className="text-gray-500 text-sm">{industria.razaoSocial}</TableCell>
                         <TableCell className="text-gray-500 text-sm">{industria.nomeFantasia}</TableCell>
                         <TableCell className="text-gray-500 text-sm font-mono">{industria.cnpj}</TableCell>
@@ -383,7 +398,7 @@ export default function ListaIndustriasPage() {
           </Table>
         </div>
 
-        {/* CONTROLES DE PAGINAÇÃO DINÂMICOS */}
+        {/* CONTROLES DE PAGINAÇÃO DINÂMICOS - AGORA SEMPRE VISÍVEL QUANDO HÁ RESULTADOS */}
         {totalPages > 0 && (
           <div className="mt-6 flex justify-center">
             <Pagination>
@@ -395,7 +410,7 @@ export default function ListaIndustriasPage() {
                       e.preventDefault();
                       if (currentPage > 0) setCurrentPage(currentPage - 1);
                     }}
-                    className={currentPage === 0 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B]"} 
+                    className={currentPage === 0 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B] cursor-pointer"} 
                   />
                 </PaginationItem>
                 
@@ -408,7 +423,7 @@ export default function ListaIndustriasPage() {
                       e.preventDefault();
                       if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
                     }}
-                    className={currentPage >= totalPages - 1 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B]"} 
+                    className={currentPage >= totalPages - 1 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B] cursor-pointer"} 
                   />
                 </PaginationItem>
               </PaginationContent>

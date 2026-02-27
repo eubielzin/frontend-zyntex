@@ -1,16 +1,17 @@
 "use client"
-
-import { ChevronLeft, Loader2, Pencil } from "lucide-react"
+import React, { useState, useEffect, use } from "react"
+import { useRouter } from "next/navigation"
+import { Pencil, ChevronLeft, Loader2, Info, ChevronDown } from "lucide-react"
 import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Industria {
   id: number;
-  nomeIndustria: string; 
+  nomeIndustria: string;
 }
 
 export default function EditarItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +27,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
   const [formData, setFormData] = useState({
     id: "",
     descricao: "",
+    ativo: true, // Campo Ativo adicionado
     industriaId: "",
     tags: "",
     marca: "",
@@ -53,6 +55,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
         setFormData({
             id: itemData.id,
             descricao: itemData.descricao || "",
+            ativo: itemData.ativo ?? true, // Recebe o status da API
             industriaId: itemData.industriaId ? String(itemData.industriaId) : "", 
             tags: itemData.tags || "",
             marca: itemData.marca || "",
@@ -98,6 +101,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
       const payload = {
         id: Number(itemId),
         descricao: formData.descricao,
+        ativo: formData.ativo, // Envia o status para a API
         marca: formData.marca,
         codigoEan: formData.codigoEan,
         tags: formData.tags,
@@ -153,6 +157,26 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
 
         <div className="space-y-8">
           
+          {/* CARD DE STATUS ATIVO ESTILIZADO */}
+          <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+              <div className="flex items-center gap-3">
+                  <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
+                  <div>
+                      <p className="text-sm font-semibold text-gray-800 font-montserrat">Status do Item</p>
+                      <p className="text-xs text-gray-500 font-montserrat">Defina se este item estará disponível no sistema</p>
+                  </div>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="ativo" 
+                    checked={formData.ativo} 
+                    onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} 
+                    className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" 
+                  />
+                  <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer font-montserrat">ATIVO</Label>
+              </div>
+          </div>
+
           {/* Linha 1: Descrição e Marca */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
@@ -171,13 +195,16 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
 
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">Marca</Label>
-              <Input 
-                name="marca" 
-                value={formData.marca} 
-                onChange={handleInputChange} 
-                className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" 
-                placeholder="Ex: Marca do Produto" 
-              />
+              <div className="relative">
+                <Input 
+                  name="marca" 
+                  value={formData.marca} 
+                  onChange={handleInputChange} 
+                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pr-10" 
+                  placeholder="Ex: Marca do Produto" 
+                />
+                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -185,33 +212,39 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">Indústria</Label>
-              <select
-                name="industriaId"
-                value={formData.industriaId}
-                onChange={handleInputChange}
-                className="flex h-11 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2A362B] disabled:opacity-50 appearance-none"
-                disabled={loadingIndustrias}
-              >
-                <option value="" disabled className="text-gray-400">
-                  {loadingIndustrias ? "Carregando indústrias..." : "Selecione uma indústria..."}
-                </option>
-                {industrias.map((ind) => (
-                  <option key={ind.id} value={ind.id} className="text-black">
-                    {ind.nomeIndustria}
+              <div className="relative">
+                <select
+                  name="industriaId"
+                  value={formData.industriaId}
+                  onChange={handleInputChange}
+                  className="flex h-11 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2A362B] disabled:opacity-50 appearance-none pr-10"
+                  disabled={loadingIndustrias}
+                >
+                  <option value="" disabled className="text-gray-400">
+                    {loadingIndustrias ? "Carregando indústrias..." : "Selecione uma indústria..."}
                   </option>
-                ))}
-              </select>
+                  {industrias.map((ind) => (
+                    <option key={ind.id} value={ind.id} className="text-black">
+                      {ind.nomeIndustria}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">ID para Integração (EAN)</Label>
-              <Input 
-                name="codigoEan" 
-                value={formData.codigoEan} 
-                onChange={handleInputChange} 
-                className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" 
-                placeholder="7890000000000" 
-              />
+              <div className="relative">
+                <Input 
+                  name="codigoEan" 
+                  value={formData.codigoEan} 
+                  onChange={handleInputChange} 
+                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pr-10" 
+                  placeholder="7890000000000" 
+                />
+                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -219,39 +252,48 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">Preço Sugerido (R$)</Label>
-              <Input 
-                name="precoSugerido" 
-                type="number" 
-                step="0.01"
-                value={formData.precoSugerido} 
-                onChange={handleInputChange} 
-                className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" 
-                placeholder="0.00" 
-              />
+              <div className="relative">
+                <Input 
+                  name="precoSugerido" 
+                  type="number" 
+                  step="0.01"
+                  value={formData.precoSugerido} 
+                  onChange={handleInputChange} 
+                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pr-10" 
+                  placeholder="0.00" 
+                />
+                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">Variação (%)</Label>
-              <Input 
-                name="variacao" 
-                type="number" 
-                step="0.1"
-                value={formData.variacao} 
-                onChange={handleInputChange} 
-                className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" 
-                placeholder="0.0" 
-              />
+              <div className="relative">
+                <Input 
+                  name="variacao" 
+                  type="number" 
+                  step="0.1"
+                  value={formData.variacao} 
+                  onChange={handleInputChange} 
+                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pr-10" 
+                  placeholder="0.0" 
+                />
+                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">Tags</Label>
-              <Input 
-                name="tags" 
-                value={formData.tags} 
-                onChange={handleInputChange} 
-                className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" 
-                placeholder="Ex: alimentos, graos" 
-              />
+              <div className="relative">
+                <Input 
+                  name="tags" 
+                  value={formData.tags} 
+                  onChange={handleInputChange} 
+                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pr-10" 
+                  placeholder="Ex: alimentos, graos" 
+                />
+                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 

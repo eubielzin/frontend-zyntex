@@ -1,5 +1,5 @@
 "use client"
-import { Pencil, ChevronLeft, ArrowRight, Check, Plus, Search, Loader2, ChevronDown, X } from "lucide-react"
+import { Pencil, ChevronLeft, ArrowRight, Check, Plus, Search, Loader2, ChevronDown, X, Info } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -223,26 +223,43 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-[15px] font-bold text-[#2A362B]">1. Edite as informações gerais</h2>
             
             <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(val) => setFormData({...formData, ativo: !!val})} />
-                <Label htmlFor="ativo" className="text-sm font-medium text-gray-700">Rota Ativa</Label>
+
+              {/* CARD DE STATUS ATIVO ESTILIZADO */}
+              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+                  <div className="flex items-center gap-3">
+                      <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
+                      <div>
+                          <p className="text-sm font-semibold text-gray-800 font-montserrat">Status do Registro</p>
+                          <p className="text-xs text-gray-500 font-montserrat">Defina se esta rota estará ativa para uso no sistema</p>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <Checkbox 
+                        id="ativo" 
+                        checked={formData.ativo} 
+                        onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} 
+                        className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" 
+                      />
+                      <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer font-montserrat">ATIVA</Label>
+                  </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Descrição *</Label>
                 <div className="md:col-span-10 relative">
-                  <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} className="h-11" />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} className="h-11 pr-10" />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Tarefa *</Label>
                 <div className="md:col-span-10 relative" ref={dropdownTarefaRef}>
-                  <div onClick={() => setIsTarefaOpen(!isTarefaOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 bg-white cursor-pointer">
+                  <div onClick={() => setIsTarefaOpen(!isTarefaOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 bg-white cursor-pointer pr-10">
                     <span className="text-sm">{formData.tarefaId ? tarefasDisponiveis.find(t => t.id === formData.tarefaId)?.nome : "Selecione o tipo de tarefa..."}</span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
                   </div>
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   {isTarefaOpen && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                         {tarefasDisponiveis.map((tarefa, index) => (
@@ -254,8 +271,20 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2"><Label className="text-gray-600 text-sm">ID para Integração</Label><Input value={formData.idIntegracao} onChange={(e) => setFormData({...formData, idIntegracao: e.target.value})} className="h-11" /></div>
-                <div className="space-y-2"><Label className="text-gray-600 text-sm">Ordem de Exibição</Label><Input type="number" value={formData.ordemExibicao} onChange={(e) => setFormData({...formData, ordemExibicao: Number(e.target.value)})} className="h-11" /></div>
+                <div className="space-y-2">
+                  <Label className="text-gray-600 text-sm">ID para Integração</Label>
+                  <div className="relative">
+                    <Input value={formData.idIntegracao} onChange={(e) => setFormData({...formData, idIntegracao: e.target.value})} className="h-11 pr-10" />
+                    <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-gray-600 text-sm">Ordem de Exibição</Label>
+                  <div className="relative">
+                    <Input type="number" value={formData.ordemExibicao} onChange={(e) => setFormData({...formData, ordemExibicao: Number(e.target.value)})} className="h-11 pr-10" />
+                    <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -315,7 +344,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
               <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                <div className="bg-[#2E3D2A] p-3 text-xs font-bold text-white uppercase">Selecionados ({locaisSelecionados.length})</div>
+                <div className="bg-[#2E3D2A] p-3 text-xs font-bold text-white uppercase">Locais Selecionados ({locaisSelecionados.length})</div>
                 <div className="flex-1 overflow-y-auto divide-y divide-gray-50 bg-white">
                   {locaisSelecionados.map((l, index) => (
                     <div key={`ls-${l.id}-${index}`} className="flex items-center justify-between p-3 bg-green-50/40 hover:bg-green-50/60 transition-colors"><span className="text-sm font-semibold text-[#2A362B]">{l.descricao}</span><Button onClick={() => {setLocaisDisponiveis([...locaisDisponiveis, l]); setLocaisSelecionados(locaisSelecionados.filter(i => i.id !== l.id))}} size="icon" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50"><X className="h-4 w-4" /></Button></div>

@@ -87,24 +87,35 @@ export default function ListaPromotoresPage() {
   const fetchPromotores = async (nome?: string, page: number = 0) => {
     try {
       setLoading(true);
-      // Rota ajustada para suportar a busca e a paginação ao mesmo tempo
-      let url = `${getApiUrl()}/paged?page=${page}&size=10`;
       
-      // Caso sua API use uma rota diferente para buscar com paginação, ajuste aqui:
       if (nome) {
-        url = `${getApiUrl()}/buscar?nome=${encodeURIComponent(nome)}&page=${page}&size=10`;
+        // Chamada para o endpoint de busca (Retorna List<PromotorFiltroBusca>)
+        const url = `${getApiUrl()}/buscar?nome=${encodeURIComponent(nome)}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Erro ao buscar dados");
+        
+        const data = await response.json();
+        
+        setPromotores(Array.isArray(data) ? data : []);
+        setTotalPages(1); // Esconde a paginação pois veio a lista completa
+        setCurrentPage(0);
+        setTotalElements(Array.isArray(data) ? data.length : 0);
+      } else {
+        // Chamada para o endpoint paginado padrão
+        const url = `${getApiUrl()}/paged?page=${page}&size=10`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Erro ao carregar dados paginados");
+        
+        const data = await response.json();
+        
+        // Mapeia a estrutura do Pageable (Spring Boot)
+        setPromotores(data.content || []);
+        setTotalPages(data.totalPages || 1);
+        setCurrentPage(data.number || 0);
+        setTotalElements(data.totalElements || 0);
       }
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Erro ao carregar dados");
-      
-      const data = await response.json();
-      
-      // Mapeia a estrutura do Pageable (Spring Boot)
-      setPromotores(data.content || []);
-      setTotalPages(data.totalPages || 1);
-      setCurrentPage(data.number || 0);
-      setTotalElements(data.totalElements || 0);
 
     } catch (error) {
       console.error("Erro na requisição:", error);
@@ -151,6 +162,8 @@ export default function ListaPromotoresPage() {
             setCurrentPage(currentPage - 1);
         } else {
             setTotalElements(prev => Math.max(0, prev - 1));
+            // Recarrega a página para preencher o espaço vazio
+            fetchPromotores(termoBusca, currentPage);
         }
       } else {
         const errorText = await response.text();
@@ -182,7 +195,7 @@ export default function ListaPromotoresPage() {
               href="#" 
               onClick={(e) => { e.preventDefault(); setCurrentPage(i); }}
               isActive={currentPage === i} 
-              className={currentPage === i ? "bg-[#2A362B] text-white hover:bg-[#1f2920] hover:text-white rounded-md" : "text-gray-600 hover:text-[#2A362B]"}
+              className={currentPage === i ? "bg-[#2A362B] text-white hover:bg-[#1f2920] hover:text-white rounded-md" : "text-gray-600 hover:text-[#2A362B] cursor-pointer"}
             >
               {i + 1}
             </PaginationLink>
@@ -385,7 +398,7 @@ export default function ListaPromotoresPage() {
                       e.preventDefault();
                       if (currentPage > 0) setCurrentPage(currentPage - 1);
                     }}
-                    className={currentPage === 0 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B]"} 
+                    className={currentPage === 0 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B] cursor-pointer"} 
                   />
                 </PaginationItem>
                 
@@ -398,7 +411,7 @@ export default function ListaPromotoresPage() {
                       e.preventDefault();
                       if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
                     }}
-                    className={currentPage >= totalPages - 1 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B]"} 
+                    className={currentPage >= totalPages - 1 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B] cursor-pointer"} 
                   />
                 </PaginationItem>
               </PaginationContent>

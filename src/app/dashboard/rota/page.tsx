@@ -199,14 +199,14 @@ export default function RotaPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B]" />
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 type="search"
                 placeholder="Buscar pela descrição na página..."
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
-                className="pl-10 w-60 h-[45px] bg-gray-50 border-gray-200 focus:bg-white focus:ring-1 focus:ring-[#2A362B] transition-all"
+                className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
               />
             </div>
             {termoBusca && (
