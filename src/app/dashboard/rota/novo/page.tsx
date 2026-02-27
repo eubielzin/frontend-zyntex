@@ -298,7 +298,6 @@ export default function NovaRotaPage() {
                     <div key={l.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{l.descricao}</span>
-                        <span className="text-[10px] text-gray-400 font-mono">ID: {l.idIntegracao || "N/A"}</span>
                       </div>
                       <Button onClick={() => {setLocaisSelecionados([...locaisSelecionados, l]); setLocaisDisponiveis(locaisDisponiveis.filter(i => i.id !== l.id))}} size="icon" variant="ghost" className="h-7 w-7 text-green-600"><Plus className="h-4 w-4" /></Button>
                     </div>

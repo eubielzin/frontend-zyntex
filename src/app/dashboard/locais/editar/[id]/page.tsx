@@ -239,7 +239,6 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
         </Button>
         <div>
            <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Editar Local</h1>
-           <p className="text-sm text-gray-500 font-medium">PDV: {formData.descricao}</p>
         </div>
       </div>
 
