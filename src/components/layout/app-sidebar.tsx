@@ -46,7 +46,7 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     title: "Locais",
-    icon: "/icons/distance.png ",
+    icon: "/icons/distance.png",
     url: "/dashboard/locais",
   },
   {
