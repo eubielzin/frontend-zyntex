@@ -186,8 +186,8 @@ export default function NovoPromotorPage() {
     const fetchData = async () => {
       try {
         const [supRes, rotasRes] = await Promise.all([
-          fetch("https://zyntex-api.onrender.com/api/usuario/supervisores"),
-          fetch("https://zyntex-api.onrender.com/api/rota") 
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/supervisores`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota`) 
         ]);
         if (supRes.ok) setSupervisores(await supRes.json());
         if (rotasRes.ok) setRotasApi(await rotasRes.json());
@@ -221,7 +221,7 @@ export default function NovoPromotorPage() {
         rotasIds: rotasSelecionadas 
       };
 
-      const response = await fetch("https://zyntex-api.onrender.com/api/promotor", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend)

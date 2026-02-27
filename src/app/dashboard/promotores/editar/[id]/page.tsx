@@ -1,26 +1,52 @@
 "use client"
-import { Pencil, ChevronLeft, ArrowRight, X, ChevronDown, Check } from "lucide-react"
+
+import React, { useState, useEffect, useRef } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { Pencil, ChevronLeft, ArrowRight, Check, ChevronDown, Info } from "lucide-react"
 import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useState, useEffect, useRef } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { Checkbox } from "@/components/ui/checkbox"
 
-// --- Interfaces ---
-interface Supervisor { id: number; username: string }
-interface FormData {
-  nome: string; sexo: string; supervisorId: number | "";
-  telefone: string; salario: string; metaMensal: string; observacao: string;
-  bateria: number;
-  endereco: {
-    logradouro: string; tipoLogradouro: string; numero: string; complemento: string;
-    bairro: string; cidade: string; estado: string; cep: string; referencia: string;
-  }
+// --- INTERFACES ---
+interface Supervisor {
+  id: number;
+  username: string;
 }
 
-const ESTADOS_BR = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+interface Endereco {
+  logradouro: string;
+  tipoLogradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+  referencia: string;
+}
+
+interface FormData {
+  nome: string;
+  ativo: boolean; // ADICIONADO O CAMPO ATIVO
+  sexo: string;
+  supervisorId: string | number;
+  telefone: string;
+  salario: string;
+  metaMensal: string;
+  observacao: string;
+  bateria: number;
+  endereco: Endereco;
+}
+
+// --- CONSTANTES ---
+const ESTADOS_BR = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", 
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
 
 export default function EditarPromotorPage() {
   const params = useParams();
@@ -42,8 +68,14 @@ export default function EditarPromotorPage() {
   const dropdownEstadoRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
-    nome: "", sexo: "", supervisorId: "",
-    telefone: "", salario: "", metaMensal: "", observacao: "",
+    nome: "", 
+    ativo: true, // INICIALIZANDO COMO TRUE
+    sexo: "", 
+    supervisorId: "",
+    telefone: "", 
+    salario: "", 
+    metaMensal: "", 
+    observacao: "",
     bateria: 0,
     endereco: { logradouro: "", tipoLogradouro: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "", cep: "", referencia: "" }
   });
@@ -91,14 +123,15 @@ export default function EditarPromotorPage() {
     const fetchData = async () => {
       try {
         const [promotorRes, supRes] = await Promise.all([
-          fetch(`https://zyntex-api.onrender.com/api/promotor/${id}`),
-          fetch("https://zyntex-api.onrender.com/api/usuario/supervisores")
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/${id}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/supervisores`)
         ]);
 
         if (promotorRes.ok) {
           const data = await promotorRes.json();
           setFormData({
             ...data,
+            ativo: data.ativo ?? true, // Lendo o ativo do banco
             telefone: data.telefone ? aplicarMascaraTelefone(data.telefone) : "",
             salario: data.salario ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(data.salario) : "",
             metaMensal: data.metaMensal ? new Intl.NumberFormat('de-DE').format(data.metaMensal) : "",
@@ -147,7 +180,7 @@ export default function EditarPromotorPage() {
         metaMensal: formData.metaMensal.replace(/\./g, ''), 
       };
 
-      const response = await fetch(`https://zyntex-api.onrender.com/api/promotor/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend)
@@ -191,6 +224,27 @@ export default function EditarPromotorPage() {
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-gray-800 mb-8 font-montserrat border-b pb-4">Informações gerais</h2>
             <div className="space-y-8 max-w-5xl">
+              
+              {/* CARD DE STATUS ATIVO ESTILIZADO */}
+              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+                  <div className="flex items-center gap-3">
+                      <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
+                      <div>
+                          <p className="text-sm font-semibold text-gray-800 font-montserrat">Status do Promotor</p>
+                          <p className="text-xs text-gray-500 font-montserrat">Defina se este promotor está ativo no sistema</p>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <Checkbox 
+                        id="ativo" 
+                        checked={formData.ativo} 
+                        onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} 
+                        className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" 
+                      />
+                      <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer font-montserrat">ATIVO</Label>
+                  </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Telefone</Label>
                 <div className="md:col-span-10 relative">

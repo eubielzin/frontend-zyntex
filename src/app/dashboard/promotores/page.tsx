@@ -41,6 +41,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface Promotor {
   id: number;
@@ -56,25 +65,47 @@ interface Promotor {
 export default function ListaPromotoresPage() {
   const [promotores, setPromotores] = React.useState<Promotor[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [exporting, setExporting] = React.useState(false); // Estado para o loading do excel
+  const [exporting, setExporting] = React.useState(false);
   const [termoBusca, setTermoBusca] = React.useState("");
   const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Visualizar endereço");
 
+  // ESTADOS DE PAGINAÇÃO (Spring Data JPA Pageable)
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalElements, setTotalElements] = React.useState(0);
+
   const opcoes = ["Exportar dados", "Importar dados"];
+
+  // Evita duplicar /api
+  const getApiUrl = () => {
+    const base = process.env.NEXT_PUBLIC_API_URL || "";
+    return base.endsWith("/api") ? `${base}/promotor` : `${base}/api/promotor`;
+  };
 
   // --- FUNÇÕES DE API ---
 
-  const fetchPromotores = async (nome?: string) => {
+  const fetchPromotores = async (nome?: string, page: number = 0) => {
     try {
       setLoading(true);
-      const url = nome 
-        ? `https://zyntex-api.onrender.com/api/promotor/buscar?nome=${encodeURIComponent(nome)}`
-        : "https://zyntex-api.onrender.com/api/promotor";
+      // Rota ajustada para suportar a busca e a paginação ao mesmo tempo
+      let url = `${getApiUrl()}/paged?page=${page}&size=10`;
+      
+      // Caso sua API use uma rota diferente para buscar com paginação, ajuste aqui:
+      if (nome) {
+        url = `${getApiUrl()}/buscar?nome=${encodeURIComponent(nome)}&page=${page}&size=10`;
+      }
 
       const response = await fetch(url);
       if (!response.ok) throw new Error("Erro ao carregar dados");
+      
       const data = await response.json();
-      setPromotores(Array.isArray(data) ? data : []);
+      
+      // Mapeia a estrutura do Pageable (Spring Boot)
+      setPromotores(data.content || []);
+      setTotalPages(data.totalPages || 1);
+      setCurrentPage(data.number || 0);
+      setTotalElements(data.totalElements || 0);
+
     } catch (error) {
       console.error("Erro na requisição:", error);
       setPromotores([]);
@@ -86,7 +117,7 @@ export default function ListaPromotoresPage() {
   const handleExportarDados = async () => {
     try {
       setExporting(true);
-      const response = await fetch("https://zyntex-api.onrender.com/api/promotor/exportar");
+      const response = await fetch(`${getApiUrl()}/exportar`);
       
       if (!response.ok) throw new Error("Erro ao exportar");
 
@@ -109,12 +140,18 @@ export default function ListaPromotoresPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`https://zyntex-api.onrender.com/api/promotor/${id}`, {
+      const response = await fetch(`${getApiUrl()}/${id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         setPromotores(prev => prev.filter(p => p.id !== id));
+        // Ajusta a paginação se o item deletado for o último da página
+        if (promotores.length === 1 && currentPage > 0) {
+            setCurrentPage(currentPage - 1);
+        } else {
+            setTotalElements(prev => Math.max(0, prev - 1));
+        }
       } else {
         const errorText = await response.text();
         console.error("Erro no DELETE:", response.status, errorText);
@@ -126,19 +163,48 @@ export default function ListaPromotoresPage() {
     }
   };
 
+  // Debounce para a busca e reload quando a página muda
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      fetchPromotores(termoBusca);
+      fetchPromotores(termoBusca, currentPage);
     }, 300);
     return () => clearTimeout(timer);
-  }, [termoBusca]);
+  }, [termoBusca, currentPage]);
+
+  // Função para renderizar os botões de paginação dinamicamente
+  const renderPaginationItems = () => {
+    const items = [];
+    for (let i = 0; i < totalPages; i++) {
+      if (i === 0 || i === totalPages - 1 || Math.abs(currentPage - i) <= 1) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink 
+              href="#" 
+              onClick={(e) => { e.preventDefault(); setCurrentPage(i); }}
+              isActive={currentPage === i} 
+              className={currentPage === i ? "bg-[#2A362B] text-white hover:bg-[#1f2920] hover:text-white rounded-md" : "text-gray-600 hover:text-[#2A362B]"}
+            >
+              {i + 1}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      } else if (Math.abs(currentPage - i) === 2) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationEllipsis className="text-gray-400" />
+          </PaginationItem>
+        );
+      }
+    }
+    return items;
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight font-montserrat">Promotores</h1>
         <Badge variant="secondary" className="bg-[#BFD8C5] text-[#3E583D] hover:bg-green-100 px-3 py-1 rounded-full text-xs font-normal w-fit">
-          {promotores.length} registros
+          {loading ? "Carregando..." : `${totalElements} registros`}
         </Badge>
       </div>
 
@@ -147,20 +213,25 @@ export default function ListaPromotoresPage() {
         {/* Barra de Ferramentas */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#2A362B] transition-colors" />              
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />              
               <Input
                     type="search"
                     placeholder="Buscar pelo nome..."
                     value={termoBusca}
-                    onChange={(e) => setTermoBusca(e.target.value)}
-                    // Aumentamos a pl-10 para o texto não ficar em cima do ícone
-                    className="pl-10 w-64 h-[45px] bg-gray-50 border-gray-200 focus:bg-white focus:ring-1 focus:ring-[#2A362B] transition-all"
+                    onChange={(e) => {
+                      setTermoBusca(e.target.value);
+                      setCurrentPage(0); // Reseta a página ao buscar
+                    }}
+                    className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
                   />
             </div>
-            <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => setTermoBusca("")}>
-              Busca Avançada
-            </p>
+            
+            {termoBusca && (
+              <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => { setTermoBusca(""); setCurrentPage(0); }}>
+                Limpar Busca
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
@@ -221,7 +292,6 @@ export default function ListaPromotoresPage() {
                   </TableCell>
                 </TableRow>
               ) : promotores.length === 0 ? (
-                /* ESTA É A ÚNICA ADIÇÃO: MENSAGEM QUANDO VAZIO */
                 <TableRow>
                   <TableCell colSpan={8} className="h-40 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-gray-500 font-montserrat">
@@ -302,6 +372,40 @@ export default function ListaPromotoresPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* CONTROLES DE PAGINAÇÃO DINÂMICOS */}
+        {totalPages > 0 && (
+          <div className="mt-6 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 0) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 0 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B]"} 
+                  />
+                </PaginationItem>
+                
+                {renderPaginationItems()}
+
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage >= totalPages - 1 ? "pointer-events-none opacity-50" : "text-gray-500 hover:text-[#2A362B]"} 
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+
       </div>
     </div>
   )

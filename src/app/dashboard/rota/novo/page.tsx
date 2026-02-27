@@ -65,9 +65,9 @@ export default function NovaRotaPage() {
     const fetchDados = async () => {
       try {
         const [resPromotores, resLocais, resTarefas] = await Promise.all([
-          fetch("https://zyntex-api.onrender.com/api/promotor"),
-          fetch("https://zyntex-api.onrender.com/api/local"),
-          fetch("https://zyntex-api.onrender.com/api/tarefa") // Puxando tarefas da API também
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor-rota/select`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota-local/select`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/select`) // Puxando tarefas da API também
         ]);
         
         if (resPromotores.ok) setPromotoresDisponiveis(await resPromotores.json());
@@ -134,7 +134,7 @@ export default function NovaRotaPage() {
 
       console.log("Enviando JSON para a API:", payload);
 
-      const response = await fetch("https://zyntex-api.onrender.com/api/rota", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -160,7 +160,7 @@ export default function NovaRotaPage() {
         <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-gray-500">
           <Link href="/dashboard/rota"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-2xl font-bold text-[#2A362B] tracking-tight">Adicionar Rota</h1>
+        <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Adicionar Rota</h1>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

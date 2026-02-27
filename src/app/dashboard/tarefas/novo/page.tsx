@@ -35,7 +35,7 @@ export default function NovaTarefaPage() {
         nome: formData.nome
       };
 
-      const response = await fetch("https://zyntex-api.onrender.com/api/tarefa", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -65,7 +65,7 @@ export default function NovaTarefaPage() {
           <Link href="/dashboard/tarefas"><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-[#2A362B] tracking-tight">Nova Tarefa</h1>
+          <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Nova Tarefa</h1>
           <p className="text-sm text-gray-500">Cadastre uma nova atividade para as rotas</p>
         </div>
       </div>

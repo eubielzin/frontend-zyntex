@@ -1,5 +1,5 @@
 "use client"
-import { Pencil, ChevronLeft, ArrowRight, Save, MapPin, Mail, Phone, Clock, Loader2, User, Calendar, Image as ImageIcon, Globe, Building2, AlignLeft, Info } from "lucide-react"
+import { Pencil, ChevronLeft, Loader2, Info } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,8 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
-
-const COR_SELECAO = "#cf9d09";
 
 export default function EditarLocalPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -21,6 +19,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
 
+  // Inicializando tudo como string para evitar Uncontrolled Inputs
   const [formData, setFormData] = useState({
     descricao: "",
     ativo: true,
@@ -29,14 +28,14 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     numeroTelefoneFixo: "",
     email: "",
     apelido: "",
-    frequenciaAtendimentoSemanal: 0,
-    tempoMedioAtendimento: 0,
+    frequenciaAtendimentoSemanal: "",
+    tempoMedioAtendimento: "",
     observacao: "",
     nomeGerente: "",
-    aniversarioGerente: "", // LocalDate
-    numeroCheckouts: 0,
-    horarioEntrada: "08:00", // LocalTime
-    horarioSaida: "18:00",
+    aniversarioGerente: "", 
+    numeroCheckouts: "",
+    horarioEntrada: "", 
+    horarioSaida: "",
     rede: "",
     bandeira: "",
     regional: "",
@@ -44,7 +43,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     canal: "",
     imagemLocalUrl: "",
     imagemPrateleiraUrl: "",
-    endereco: { //
+    endereco: {
       logradouro: "",
       tipoLogradouro: "",
       numero: "",
@@ -56,54 +55,65 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
       referencia: ""
     },
     coordenadaGPS: {
-      latitude: 0,
-      longitude: 0
+      latitude: "",
+      longitude: ""
     }
   });
 
-  // 1. Carregar Dados Iniciais detalhados
+  // 1. Carregar Dados Iniciais
   useEffect(() => {
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const response = await fetch(`https://zyntex-api.onrender.com/api/local/${localId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/${localId}`);
         if (!response.ok) throw new Error("Local não encontrado");
         
         const data = await response.json();
         
         setFormData({
           ...data,
-          // Garante strings vazias para evitar avisos de Controlled Inputs
           descricao: data.descricao || "",
           razaoSocial: data.razaoSocial || "",
           apelido: data.apelido || "",
           email: data.email || "",
           regional: data.regional || "",
           nomeGerente: data.nomeGerente || "",
+          numeroTelefoneCelular: data.numeroTelefoneCelular || "",
+          numeroTelefoneFixo: data.numeroTelefoneFixo || "",
+          observacao: data.observacao || "",
+          rede: data.rede || "",
+          bandeira: data.bandeira || "",
+          perfil: data.perfil || "",
+          canal: data.canal || "",
           aniversarioGerente: data.aniversarioGerente || "",
-          // Formata horários HH:mm:ss do Java para HH:mm do HTML
-          horarioEntrada: data.horarioEntrada?.substring(0, 5) || "08:00",
-          horarioSaida: data.horarioSaida?.substring(0, 5) || "18:00",
+          frequenciaAtendimentoSemanal: data.frequenciaAtendimentoSemanal?.toString() || "",
+          tempoMedioAtendimento: data.tempoMedioAtendimento?.toString() || "",
+          numeroCheckouts: data.numeroCheckouts?.toString() || "",
+          imagemLocalUrl: data.imagemLocalUrl || "",
+          imagemPrateleiraUrl: data.imagemPrateleiraUrl || "",
+          horarioEntrada: data.horarioEntrada?.substring(0, 5) || "",
+          horarioSaida: data.horarioSaida?.substring(0, 5) || "",
           endereco: {
             ...formData.endereco,
-            ...data.endereco
+            ...(data.endereco || {}) // Previne erro caso o endereço venha null
           },
           coordenadaGPS: {
             ...formData.coordenadaGPS,
-            ...data.coordenadaGPS
+            ...(data.coordenadaGPS || {}) // Previne erro caso a coordenada venha null
           }
         });
       } catch (error) {
         console.error("Erro busca:", error);
+        alert("Erro ao carregar dados do local.");
         router.push("/dashboard/locais");
       } finally {
         setLoadingInicial(false);
       }
     };
     if (localId) carregarDados();
-  }, [localId]);
+  }, [localId, router]);
 
-  // Máscaras
+  // Máscaras e ViaCEP
   const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
 
@@ -150,23 +160,53 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const handleSave = async () => {
     try {
       setLoading(true);
-      // Payload formatado rigorosamente para Jackson/Spring Boot
+      
+      // BLINDAGEM DO PAYLOAD: Evita enviar "" para o Java em campos numéricos/datas
       const payload = {
-        ...formData,
-        frequenciaAtendimentoSemanal: Number(formData.frequenciaAtendimentoSemanal || 0),
-        tempoMedioAtendimento: Number(formData.tempoMedioAtendimento || 0),
-        numeroCheckouts: Number(formData.numeroCheckouts || 0),
-        coordenadaGPS: {
-          latitude: Number(formData.coordenadaGPS.latitude || 0),
-          longitude: Number(formData.coordenadaGPS.longitude || 0)
+        ativo: formData.ativo,
+        descricao: formData.descricao,
+        razaoSocial: formData.razaoSocial,
+        numeroTelefoneCelular: formData.numeroTelefoneCelular,
+        numeroTelefoneFixo: formData.numeroTelefoneFixo,
+        email: formData.email,
+        apelido: formData.apelido,
+        observacao: formData.observacao,
+        nomeGerente: formData.nomeGerente,
+        rede: formData.rede,
+        bandeira: formData.bandeira,
+        regional: formData.regional,
+        perfil: formData.perfil,
+        canal: formData.canal,
+        imagemLocalUrl: formData.imagemLocalUrl,
+        imagemPrateleiraUrl: formData.imagemPrateleiraUrl,
+        
+        // Conversões Seguras: se vazio envia null para não dar erro 400 no Java
+        frequenciaAtendimentoSemanal: formData.frequenciaAtendimentoSemanal ? Number(formData.frequenciaAtendimentoSemanal) : null,
+        tempoMedioAtendimento: formData.tempoMedioAtendimento ? Number(formData.tempoMedioAtendimento) : null,
+        numeroCheckouts: formData.numeroCheckouts ? Number(formData.numeroCheckouts) : null,
+        aniversarioGerente: formData.aniversarioGerente || null,
+        horarioEntrada: formData.horarioEntrada ? (formData.horarioEntrada.length === 5 ? `${formData.horarioEntrada}:00` : formData.horarioEntrada) : null,
+        horarioSaida: formData.horarioSaida ? (formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida) : null,
+        
+        endereco: {
+          logradouro: formData.endereco.logradouro,
+          tipoLogradouro: formData.endereco.tipoLogradouro,
+          numero: formData.endereco.numero,
+          complemento: formData.endereco.complemento,
+          bairro: formData.endereco.bairro,
+          cidade: formData.endereco.cidade,
+          estado: formData.endereco.estado,
+          cep: formData.endereco.cep,
+          referencia: formData.endereco.referencia
         },
-        // Garante formato HH:mm:ss esperado pelo LocalTime
-        horarioEntrada: formData.horarioEntrada.length === 5 ? `${formData.horarioEntrada}:00` : formData.horarioEntrada,
-        horarioSaida: formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida
+        coordenadaGPS: {
+          latitude: formData.coordenadaGPS.latitude ? parseFloat(String(formData.coordenadaGPS.latitude)) : null,
+          longitude: formData.coordenadaGPS.longitude ? parseFloat(String(formData.coordenadaGPS.longitude)) : null
+        }
       };
 
-      const response = await fetch(`https://zyntex-api.onrender.com/api/local/${localId}`, {
-        method: "PATCH", // Alinhado com @PatchMapping
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/${localId}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
@@ -177,122 +217,177 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
       } else {
         const errorMsg = await response.text();
         console.error("Erro API:", errorMsg);
-        alert("Erro no servidor Java ao processar os dados.");
+        alert(`Erro no servidor ao salvar. Detalhe: ${errorMsg}`);
       }
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+    } catch (error) { 
+        console.error(error); 
+        alert("Erro de conexão ao salvar.");
+    } finally { 
+        setLoading(false); 
+    }
   };
 
-  if (loadingInicial) return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="animate-spin text-gray-400" /></div>;
+  if (loadingInicial) return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="animate-spin text-gray-400 h-8 w-8" /></div>;
 
   return (
-    <div className="space-y-6 font-montserrat pb-10 max-w-[1200px] mx-auto animate-in fade-in duration-500">
-      {/* Design Premium Mantido conforme solicitado */}
-      <div className="flex items-center justify-between border-b pb-4 px-4 md:px-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="h-10 w-10 text-gray-500 hover:bg-gray-100 rounded-full">
-            <Link href="/dashboard/locais"><ChevronLeft className="h-6 w-6" /></Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-[#2A362B]">Editar Local</h1>
-            <p className="text-sm text-gray-500 font-medium">Cadastro #{localId}: {formData.descricao}</p>
-          </div>
+    <div className="space-y-6 font-montserrat w-full animate-in fade-in duration-300">
+      
+      {/* Cabeçalho Limpo */}
+      <div className="flex items-center gap-4 mb-4">
+        <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-gray-500 hover:bg-gray-100">
+          <Link href="/dashboard/locais"><ChevronLeft className="h-5 w-5" /></Link>
+        </Button>
+        <div>
+           <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Editar Local</h1>
+           <p className="text-sm text-gray-500 font-medium">PDV: {formData.descricao}</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start h-auto p-0 bg-transparent gap-2 mb-6 px-4 md:px-0">
-          <TabsTrigger value="geral" className="rounded-full px-8 py-2.5 text-sm font-semibold transition-all data-[state=active]:bg-[#2A362B] data-[state=active]:text-white bg-gray-100 text-gray-500 shadow-sm">1. Identificação</TabsTrigger>
-          <TabsTrigger value="operacional" className="rounded-full px-8 py-2.5 text-sm font-semibold transition-all data-[state=active]:bg-[#2A362B] data-[state=active]:text-white bg-gray-100 text-gray-500 shadow-sm">2. Operacional</TabsTrigger>
-          <TabsTrigger value="endereco" className="rounded-full px-8 py-2.5 text-sm font-semibold transition-all data-[state=active]:bg-[#2A362B] data-[state=active]:text-white bg-gray-100 text-gray-500 shadow-sm">3. Localização</TabsTrigger>
+        
+        {/* Abas Superiores Minimalistas */}
+        <TabsList className="w-full justify-start h-auto p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none pb-2">
+          <TabsTrigger 
+            value="geral" 
+            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+          >
+            1. Definição do Local
+          </TabsTrigger>
+          <TabsTrigger 
+            value="operacional" 
+            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+          >
+            2. Operacional
+          </TabsTrigger>
+          <TabsTrigger 
+            value="endereco" 
+            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+          >
+            3. Endereço
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="geral" className="mt-0 px-4 md:px-0 animate-in fade-in-50">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 space-y-8">
-            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-               <div className="flex items-center gap-3"><Info className="h-5 w-5 text-[#2A362B]" /><span className="text-sm font-semibold text-gray-700">Status do PDV</span></div>
-               <div className="flex items-center gap-2"><Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} /><Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer">ATIVO</Label></div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <div className="space-y-2"><Label className="text-xs font-bold uppercase text-gray-400">Descrição Principal *</Label><div className="relative"><Input name="descricao" value={formData.descricao} onChange={handleInputChange} placeholder="Nome fantasia" className="h-12 pl-11 border-gray-200" /><Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" /></div></div>
-                <div className="space-y-2"><Label className="text-xs font-bold uppercase text-gray-400">Razão Social</Label><div className="relative"><Input name="razaoSocial" value={formData.razaoSocial} onChange={handleInputChange} placeholder="Nome Jurídico" className="h-12 pl-11 border-gray-200" /><AlignLeft className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" /></div></div>
-                <div className="space-y-2"><Label className="text-xs font-bold uppercase text-gray-400">Apelido</Label><Input name="apelido" value={formData.apelido} onChange={handleInputChange} placeholder="Ex: Filial Sul" className="h-12 border-gray-200" /></div>
-                <div className="space-y-2"><Label className="text-xs font-bold uppercase text-gray-400">E-mail</Label><div className="relative"><Input name="email" value={formData.email} onChange={handleInputChange} placeholder="contato@empresa.com" className="h-12 pl-11 border-gray-200" /><Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" /></div></div>
-                <div className="space-y-2"><Label className="text-xs font-bold uppercase text-gray-400">Celular</Label><Input name="numeroTelefoneCelular" value={formData.numeroTelefoneCelular} onChange={handleInputChange} placeholder="(00) 00000-0000" className="h-12 border-gray-200" /></div>
-                <div className="space-y-2"><Label className="text-xs font-bold uppercase text-gray-400">Fixo</Label><Input name="numeroTelefoneFixo" value={formData.numeroTelefoneFixo} onChange={handleInputChange} placeholder="(00) 0000-0000" className="h-12 border-gray-200" /></div>
-            </div>
-            <div className="bg-gray-50 p-6 flex justify-end rounded-xl shadow-inner"><Button onClick={() => setActiveTab("operacional")} className="bg-[#2A362B] text-white px-8 hover:bg-[#1f2920] shadow-md transition-all">Próxima Etapa <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="operacional" className="mt-0 px-4 md:px-0 animate-in fade-in-50">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 space-y-8">
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-inner">
-                    <Label className="text-[10px] font-bold uppercase text-gray-400 flex items-center gap-2 tracking-widest"><Globe className="h-3 w-3" /> Hierarquia</Label>
-                    <Input name="regional" value={formData.regional} onChange={handleInputChange} placeholder="Regional" className="h-10 bg-white" />
-                    <Input name="rede" value={formData.rede} onChange={handleInputChange} placeholder="Rede" className="h-10 bg-white" />
-                    <Input name="bandeira" value={formData.bandeira} onChange={handleInputChange} placeholder="Bandeira" className="h-10 bg-white" />
-                  </div>
-                  <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-inner">
-                    <Label className="text-[10px] font-bold uppercase text-gray-400 flex items-center gap-2 tracking-widest"><User className="h-3 w-3" /> Gestão</Label>
-                    <Input name="nomeGerente" value={formData.nomeGerente} onChange={handleInputChange} placeholder="Gerente" className="h-10 bg-white" />
-                    <Input name="aniversarioGerente" type="date" value={formData.aniversarioGerente} onChange={handleInputChange} className="h-10 bg-white" />
-                    <Input name="numeroCheckouts" type="number" value={formData.numeroCheckouts} onChange={handleInputChange} placeholder="Checkouts" className="h-10 bg-white" />
-                  </div>
-                  <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-inner">
-                    <Label className="text-[10px] font-bold uppercase text-gray-400 flex items-center gap-2 tracking-widest"><Clock className="h-3 w-3" /> Operação</Label>
-                    <div className="flex gap-2"><Input name="horarioEntrada" type="time" value={formData.horarioEntrada} onChange={handleInputChange} className="h-10 bg-white flex-1" /><Input name="horarioSaida" type="time" value={formData.horarioSaida} onChange={handleInputChange} className="h-10 bg-white flex-1" /></div>
-                    <Input name="frequenciaAtendimentoSemanal" type="number" value={formData.frequenciaAtendimentoSemanal} onChange={handleInputChange} placeholder="Visitas Semanais" className="h-10 bg-white" />
-                    <Input name="perfil" value={formData.perfil} onChange={handleInputChange} placeholder="Perfil" className="h-10 bg-white" />
-                  </div>
-               </div>
-               <div className="space-y-2 pt-4"><Label className="text-xs font-bold uppercase text-gray-500">Observações Estratégicas</Label><textarea name="observacao" value={formData.observacao} onChange={handleInputChange} className="w-full min-h-[100px] border border-gray-200 rounded-xl p-4 text-sm bg-gray-50/50" placeholder="Anote aqui particularidades do local..." /></div>
-               <div className="bg-gray-50 p-6 flex justify-between rounded-xl"><Button variant="ghost" onClick={() => setActiveTab("geral")}>Voltar</Button><Button onClick={() => setActiveTab("endereco")} className="bg-[#2A362B] text-white px-8 shadow-md">Localização <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="endereco" className="mt-0 px-4 md:px-0 animate-in fade-in-50">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden p-8 space-y-8">
-                <div className="bg-[#2A362B]/5 border border-[#2A362B]/10 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3"><div className="bg-[#2A362B] p-1.5 rounded-full text-white"><MapPin className="h-4 w-4" /></div><h3 className="font-bold text-[#2A362B] text-sm uppercase">Endereço Completo</h3></div>
-                        {loadingCep && <div className="flex items-center gap-2 text-xs text-[#2A362B] font-bold animate-pulse"><Loader2 className="h-3 w-3 animate-spin" /> Buscando...</div>}
+        {/* Card Principal Fluido */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 w-full min-h-[600px]">
+            
+            <TabsContent value="geral" className="mt-0">
+                <div className="mb-8"><h2 className="text-[15px] font-bold text-[#2A362B]">Edite as informações gerais</h2></div>
+                
+                <div className="space-y-8">
+                    
+                    <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">Status do Registro</p>
+                                <p className="text-xs text-gray-500">Defina se este local estará disponível imediatamente</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" />
+                            <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer">ATIVO</Label>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                        <div className="md:col-span-3 space-y-1.5"><Label className="text-[10px] font-bold text-gray-400">CEP</Label><Input name="endereco.cep" value={formData.endereco.cep} onChange={handleInputChange} placeholder="00000-000" className="h-11 border-gray-200 font-mono" /></div>
-                        <div className="md:col-span-9 space-y-1.5"><Label className="text-[10px] font-bold text-gray-400">LOGRADOURO *</Label><Input name="endereco.logradouro" value={formData.endereco.logradouro} onChange={handleInputChange} placeholder="Rua, Avenida..." className="h-11 border-gray-200 font-semibold" /></div>
-                        <div className="md:col-span-2 space-y-1.5"><Label className="text-[10px] font-bold text-gray-400">Nº</Label><Input name="endereco.numero" value={formData.endereco.numero} onChange={handleInputChange} placeholder="123" className="h-11 border-gray-200" /></div>
-                        <div className="md:col-span-5 space-y-1.5"><Label className="text-[10px] font-bold text-gray-400">BAIRRO</Label><Input name="endereco.bairro" value={formData.endereco.bairro} onChange={handleInputChange} placeholder="Bairro" className="h-11 border-gray-200" /></div>
-                        <div className="md:col-span-3 space-y-1.5"><Label className="text-[10px] font-bold text-gray-400">CIDADE</Label><Input name="endereco.cidade" value={formData.endereco.cidade} onChange={handleInputChange} placeholder="Cidade" className="h-11 border-gray-200" /></div>
-                        <div className="md:col-span-2 space-y-1.5"><Label className="text-[10px] font-bold text-gray-400">UF</Label><Input name="endereco.estado" value={formData.endereco.estado} onChange={handleInputChange} maxLength={2} placeholder="MA" className="h-11 text-center font-bold uppercase border-gray-200" /></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <Label className="text-[13px] font-medium text-gray-700">Descrição Principal *</Label>
+                            <div className="relative">
+                                <Input name="descricao" value={formData.descricao || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" placeholder="Nome fantasia do local" />
+                                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+                            </div>
+                        </div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Razão Social</Label><Input name="razaoSocial" value={formData.razaoSocial || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Nome jurídico completo" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Apelido / Nome Curto</Label><Input name="apelido" value={formData.apelido || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Ex: Loja Centro" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">E-mail de Contato</Label><Input name="email" type="email" value={formData.email || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="contato@empresa.com" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Telefone Celular</Label><Input name="numeroTelefoneCelular" value={formData.numeroTelefoneCelular || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="(00) 00000-0000" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Telefone Fixo</Label><Input name="numeroTelefoneFixo" value={formData.numeroTelefoneFixo || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="(00) 0000-0000" /></div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="p-6 border border-gray-100 rounded-2xl bg-gray-50/50 shadow-inner">
-                        <Label className="text-xs font-bold text-gray-500 uppercase mb-4 block">Coordenadas Digitais</Label>
-                        <div className="flex gap-4">
-                            <div className="flex-1 space-y-1"><Label className="text-[9px] text-gray-400">LATITUDE</Label><Input name="coordenadaGPS.latitude" type="number" step="any" value={formData.coordenadaGPS.latitude} onChange={handleInputChange} className="h-10 bg-white" /></div>
-                            <div className="flex-1 space-y-1"><Label className="text-[9px] text-gray-400">LONGITUDE</Label><Input name="coordenadaGPS.longitude" type="number" step="any" value={formData.coordenadaGPS.longitude} onChange={handleInputChange} className="h-10 bg-white" /></div>
-                        </div>
+                <div className="flex justify-end mt-12 pt-6 border-t border-gray-100">
+                    <Button onClick={() => setActiveTab("operacional")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white px-8 h-11 rounded-md text-[13px] font-medium transition-colors">Próxima Etapa</Button>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="operacional" className="mt-0">
+                <div className="mb-8"><h2 className="text-[15px] font-bold text-[#2A362B]">2. Defina o perfil operacional</h2></div>
+                
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Regional</Label><Input name="regional" value={formData.regional || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Rede</Label><Input name="rede" value={formData.rede || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Bandeira</Label><Input name="bandeira" value={formData.bandeira || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
-                    <div className="p-6 border border-gray-100 rounded-2xl bg-gray-50/50 shadow-inner">
-                        <Label className="text-xs font-bold text-gray-500 uppercase mb-4 block">Mídias do Local</Label>
-                        <div className="space-y-3">
-                           <div className="relative"><Input name="imagemLocalUrl" value={formData.imagemLocalUrl} onChange={handleInputChange} placeholder="URL Foto Fachada" className="h-10 pl-10 text-xs bg-white border-gray-200" /><ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-                           <div className="relative"><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl} onChange={handleInputChange} placeholder="URL Foto Prateleira" className="h-10 pl-10 text-xs bg-white border-gray-200" /><ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /></div>
-                        </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Nome do Gerente</Label><Input name="nomeGerente" value={formData.nomeGerente || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Aniversário Gerente</Label><Input name="aniversarioGerente" type="date" value={formData.aniversarioGerente || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm text-gray-500" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Perfil do Local</Label><Input name="perfil" value={formData.perfil || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Horário Entrada</Label><Input name="horarioEntrada" type="time" value={formData.horarioEntrada || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm text-gray-500" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Horário Saída</Label><Input name="horarioSaida" type="time" value={formData.horarioSaida || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm text-gray-500" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Frequência Semanal</Label><Input name="frequenciaAtendimentoSemanal" type="number" value={formData.frequenciaAtendimentoSemanal || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Canal de Venda</Label><Input name="canal" value={formData.canal || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Número de Checkouts</Label><Input name="numeroCheckouts" type="number" value={formData.numeroCheckouts || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Tempo Médio (minutos)</Label><Input name="tempoMedioAtendimento" type="number" value={formData.tempoMedioAtendimento || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-[13px] font-medium text-gray-700">Observações Estratégicas</Label>
+                        <textarea name="observacao" value={formData.observacao || ""} onChange={handleInputChange} className="w-full min-h-[100px] border border-gray-200 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2A362B]" />
                     </div>
                 </div>
 
-                <div className="bg-gray-100 p-8 flex justify-between items-center rounded-xl shadow-xl">
+                <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
+                    <Button variant="ghost" onClick={() => setActiveTab("geral")} className="text-gray-500 font-medium">Voltar</Button>
+                    <Button onClick={() => setActiveTab("endereco")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white px-8 h-11 rounded-md text-[13px] font-medium transition-colors">Próxima Etapa</Button>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="endereco" className="mt-0">
+                <div className="mb-8 flex items-center gap-4">
+                    <h2 className="text-[15px] font-bold text-[#2A362B]">3. Dados de Localização</h2>
+                    {loadingCep && <Loader2 className="h-4 w-4 animate-spin text-[#2A362B]" />}
+                </div>
+
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                        <div className="md:col-span-3 space-y-2"><Label className="text-[13px] font-medium text-gray-700">CEP</Label><Input name="endereco.cep" value={formData.endereco?.cep || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm font-mono" placeholder="00000-000" /></div>
+                        <div className="md:col-span-3 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Tipo</Label><Input name="endereco.tipoLogradouro" value={formData.endereco?.tipoLogradouro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Rua, Av..." /></div>
+                        <div className="md:col-span-6 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Logradouro *</Label><Input name="endereco.logradouro" value={formData.endereco?.logradouro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-2 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Nº</Label><Input name="endereco.numero" value={formData.endereco?.numero || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Bairro</Label><Input name="endereco.bairro" value={formData.endereco?.bairro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Cidade</Label><Input name="endereco.cidade" value={formData.endereco?.cidade || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-2 space-y-2"><Label className="text-[13px] font-medium text-gray-700">UF</Label><Input name="endereco.estado" value={formData.endereco?.estado || ""} onChange={handleInputChange} maxLength={2} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm uppercase" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Complemento</Label><Input name="endereco.complemento" value={formData.endereco?.complemento || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Referência</Label><Input name="endereco.referencia" value={formData.endereco?.referencia || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" step="any" value={formData.coordenadaGPS?.latitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" value={formData.coordenadaGPS?.longitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">URL Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">URL Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+                </div>
+
+                <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
                   <Button variant="ghost" onClick={() => setActiveTab("operacional")} className="text-gray-500 font-medium">Voltar</Button>
-                  <Button onClick={handleSave} disabled={loading} className="text-white px-12 py-6 rounded-xl font-bold text-lg shadow-xl shadow-yellow-600/20 transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: COR_SELECAO }}>
-                    {loading ? <Loader2 className="animate-spin mr-3" /> : <Save className="mr-3" />} Salvar Alterações
+                  <Button onClick={handleSave} disabled={loading} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white px-8 h-11 rounded-md text-[13px] font-medium transition-colors gap-2">
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />} Salvar Alterações
                   </Button>
                 </div>
-          </div>
-        </TabsContent>
+            </TabsContent>
+        </div>
       </Tabs>
     </div>
   )

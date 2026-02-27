@@ -27,7 +27,7 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
     const carregarTarefa = async () => {
       try {
         setLoadingInicial(true);
-        const response = await fetch(`https://zyntex-api.onrender.com/api/tarefa/${tarefaId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/${tarefaId}`);
         if (!response.ok) throw new Error("Tarefa não encontrada");
         
         const data = await response.json();
@@ -65,7 +65,7 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
         nome: formData.nome
       };
 
-      const response = await fetch(`https://zyntex-api.onrender.com/api/tarefa/${tarefaId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/${tarefaId}`, {
         method: "PUT", // Verifique se o seu controller usa PUT ou PATCH. Geralmente para entidades simples é PUT.
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -99,7 +99,7 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
           <Link href="/dashboard/tarefas"><ChevronLeft className="h-6 w-6" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-[#2A362B] tracking-tight">Editar Tarefa</h1>
+          <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Editar Tarefa</h1>
           <p className="text-sm text-gray-500">Ajustando os detalhes da tarefa #{tarefaId}</p>
         </div>
       </div>
