@@ -18,7 +18,7 @@ export default function NovoItemPage() {
   const [loading, setLoading] = useState(false);
   const [industrias, setIndustrias] = useState<Industria[]>([]);
   const [loadingIndustrias, setLoadingIndustrias] = useState(true);
-
+  const [isSupOpen, setIsSupOpen] = useState(false)
   const [formData, setFormData] = useState({
     descricao: "",
     industriaId: "",
@@ -131,7 +131,7 @@ export default function NovoItemPage() {
                   value={formData.descricao} 
                   onChange={handleInputChange} 
                   className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" 
-                  placeholder="Ex: Nome do Produto" 
+                  placeholder="Descrição do item" 
                 />
                 <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
               </div>
@@ -157,16 +157,17 @@ export default function NovoItemPage() {
                 name="industriaId"
                 value={formData.industriaId}
                 onChange={handleInputChange}
-                className="flex h-11 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#2A362B] disabled:opacity-50 appearance-none"
+                className="flex h-11 w-full  rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#2A362B] disabled:opacity-50 appearance-none"
                 disabled={loadingIndustrias}
               >
                 <option value="" disabled className="text-gray-400">
                   {loadingIndustrias ? "Carregando indústrias..." : "Selecione uma indústria..."}
                 </option>
                 {industrias.map((ind) => (
-                  <option key={ind.id} value={ind.id} className="text-black">
+                  <option key={ind.id} value={ind.id} className="text-black hover:bg-amber-500">
                     {ind.nomeIndustria}
                   </option>
+                  
                 ))}
               </select>
             </div>

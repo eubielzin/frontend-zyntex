@@ -159,19 +159,19 @@ export default function NovoLocalPage() {
         <TabsList className="w-full justify-start h-auto p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none pb-2">
           <TabsTrigger 
             value="geral" 
-            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             1. Definição do Local
           </TabsTrigger>
           <TabsTrigger 
             value="operacional" 
-            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             2. Operacional
           </TabsTrigger>
           <TabsTrigger 
             value="endereco" 
-            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             3. Endereço
           </TabsTrigger>
@@ -204,7 +204,7 @@ export default function NovoLocalPage() {
                         <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Descrição Principal *</Label>
                             <div className="relative">
-                                <Input name="descricao" value={formData.descricao} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" placeholder="Nome fantasia do local" />
+                                <Input name="descricao" value={formData.descricao} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" placeholder="Descrição" />
                                 <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
                             </div>
                         </div>
@@ -286,8 +286,8 @@ export default function NovoLocalPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">URL Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">URL Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
                 </div>
 

@@ -60,8 +60,8 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
       try {
         setLoadingInicial(true);
         const [resPromotores, resLocais, resTarefas, resRotaAtual] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor-rota/select`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota-local/select`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/select`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/select`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/select`), // Puxando tarefas da API também
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota/${rotaId}`)
         ]);
@@ -200,19 +200,19 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         <TabsList className="flex w-full bg-[#F8F9FA] p-1.5 rounded-xl border border-gray-200 mb-6 h-auto">
           <TabsTrigger 
             value="geral" 
-            className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             Definição da Rota
           </TabsTrigger>
           <TabsTrigger 
             value="pessoas" 
-            className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             Pessoas
           </TabsTrigger>
           <TabsTrigger 
             value="locais" 
-            className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             Locais
           </TabsTrigger>
@@ -263,7 +263,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
                   {isTarefaOpen && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                         {tarefasDisponiveis.map((tarefa, index) => (
-                          <div key={`tarefa-${tarefa.id}-${index}`} onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b last:border-0">{tarefa.nome}</div>
+                          <div key={`tarefa-${tarefa.id}-${index}`} onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} className="px-4 py-3 hover:bg-[#CF9D09] hover:text-white cursor-pointer text-sm border-b last:border-0">{tarefa.nome}</div>
                         ))}
                     </div>
                   )}

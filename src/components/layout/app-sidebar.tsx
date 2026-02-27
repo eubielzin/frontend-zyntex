@@ -70,18 +70,19 @@ const MENU_ITEMS: MenuItem[] = [
   {
     title: "Visitas",
     icon: "/icons/location_away.png",
-    url: "/dashboard/visitas",
-    items: [{ title: "Relatórios", url: "/dashboard/visitas/relatorios" }]
+    url: "/login",
+  
+
   },
   {
     title: "Book de Fotos",
     icon: "/icons/photo_camera.png",
-    url: "/dashboard/fotos",
+    url: "/login",
   },
   {
     title: "Usuários do Sistema",
     icon: "/icons/groups.png",
-    url: "/dashboard/usuarios",
+    url: "/login",
   },
 ]
 

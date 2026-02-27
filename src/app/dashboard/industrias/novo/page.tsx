@@ -152,18 +152,18 @@ export default function NovaIndustriaPage() {
         <h1 className="text-[22px] font-bold text-[#2A362B] tracking-tight">Adicionar Indústria</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-5">
         
         <TabsList className="flex w-full bg-[#F8F9FA] p-1.5 rounded-xl border border-gray-200 mb-6 h-auto">
           <TabsTrigger 
             value="geral" 
-            className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             1. Dados da Indústria
           </TabsTrigger>
           <TabsTrigger 
             value="endereco" 
-            className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             2. Endereço
           </TabsTrigger>

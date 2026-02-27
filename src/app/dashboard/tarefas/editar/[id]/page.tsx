@@ -1,9 +1,10 @@
 "use client"
-import { ChevronLeft, Save, Loader2, ListTodo, Activity, Hash } from "lucide-react"
+import { ChevronLeft, Save, Loader2, ListTodo, Activity, Hash, Info } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 
@@ -17,9 +18,10 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingSalvar, setLoadingSalvar] = useState(false);
 
-  // Estado simples contendo apenas o Nome
+  // Estado simples contendo Nome e Ativo
   const [formData, setFormData] = useState({
-    nome: ""
+    nome: "",
+    ativo: true // Adicionado o campo ativo
   });
 
   // Busca os dados da tarefa existente no banco
@@ -32,7 +34,8 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
         
         const data = await response.json();
         setFormData({
-          nome: data.nome || ""
+          nome: data.nome || "",
+          ativo: data.ativo ?? true // Puxa o status da API
         });
       } catch (error) {
         console.error("Erro ao carregar:", error);
@@ -59,14 +62,16 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
     try {
       setLoadingSalvar(true);
       
-      // Enviando o ID (por garantia) e o Nome atualizado
+      // Enviando o ID, Nome atualizado e o status Ativo
       const payload = {
         id: Number(tarefaId),
-        nome: formData.nome
+        nome: formData.nome,
+        ativo: formData.ativo
       };
 
+      // Se o seu backend estiver usando PATCH para tarefas, troque o método abaixo.
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/${tarefaId}`, {
-        method: "PUT", // Verifique se o seu controller usa PUT ou PATCH. Geralmente para entidades simples é PUT.
+        method: "PUT", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
@@ -113,6 +118,26 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
               <ListTodo className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-semibold text-gray-800">Detalhes da Atividade</h2>
+          </div>
+
+          {/* CARD DE STATUS ATIVO ESTILIZADO */}
+          <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+              <div className="flex items-center gap-3">
+                  <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
+                  <div>
+                      <p className="text-sm font-semibold text-gray-800 font-montserrat">Status da Tarefa</p>
+                      <p className="text-xs text-gray-500 font-montserrat">Defina se esta tarefa estará disponível no sistema</p>
+                  </div>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="ativo" 
+                    checked={formData.ativo} 
+                    onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} 
+                    className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" 
+                  />
+                  <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer font-montserrat">ATIVO</Label>
+              </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">

@@ -43,21 +43,17 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     canal: "",
     imagemLocalUrl: "",
     imagemPrateleiraUrl: "",
-    endereco: {
-      logradouro: "",
-      tipoLogradouro: "",
-      numero: "",
-      complemento: "",
-      bairro: "",
-      cidade: "",
-      estado: "",
-      cep: "",
-      referencia: ""
-    },
-    coordenadaGPS: {
-      latitude: "",
-      longitude: ""
-    }
+    logradouro: "",
+    tipoLogradouro: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
+    cep: "",
+    referencia: "",
+    latitude: "",
+    longitude: ""
   });
 
   // 1. Carregar Dados Iniciais
@@ -93,14 +89,17 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
           imagemPrateleiraUrl: data.imagemPrateleiraUrl || "",
           horarioEntrada: data.horarioEntrada?.substring(0, 5) || "",
           horarioSaida: data.horarioSaida?.substring(0, 5) || "",
-          endereco: {
-            ...formData.endereco,
-            ...(data.endereco || {}) // Previne erro caso o endereço venha null
-          },
-          coordenadaGPS: {
-            ...formData.coordenadaGPS,
-            ...(data.coordenadaGPS || {}) // Previne erro caso a coordenada venha null
-          }
+          logradouro: data?.logradouro || "",
+          tipoLogradouro: data?.tipoLogradouro || "",
+          numero: data?.numero || "",
+          complemento: data?.complemento || "",
+          bairro: data?.bairro || "",
+          cidade: data?.cidade || "",
+          estado: data?.estado || "",
+          cep: data?.cep || "",
+          referencia: data?.referencia || "",
+          latitude: data?.latitude?.toString() || "",
+          longitude: data?.longitude?.toString() || "",
         });
       } catch (error) {
         console.error("Erro busca:", error);
@@ -126,13 +125,12 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
       if (!data.erro) {
         setFormData(prev => ({
           ...prev,
-          endereco: {
-            ...prev.endereco,
-            logradouro: data.logradouro || prev.endereco.logradouro,
-            bairro: data.bairro || prev.endereco.bairro,
-            cidade: data.localidade || prev.endereco.cidade,
-            estado: data.uf || prev.endereco.estado
-          }
+        
+            logradouro: data.logradouro || prev.logradouro,
+            bairro: data.bairro || prev.bairro,
+            cidade: data.localidade || prev.cidade,
+            estado: data.uf || prev.estado
+          
         }));
       }
     } catch (err) { console.error(err); } finally { setLoadingCep(false); }
@@ -150,7 +148,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
       const [obj, field] = name.split('.');
       setFormData(prev => ({
         ...prev,
-        [obj]: { ...prev[obj as keyof typeof prev] as object, [field]: value }
+        [field]: value
       }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
@@ -189,19 +187,19 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
         horarioSaida: formData.horarioSaida ? (formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida) : null,
         
         endereco: {
-          logradouro: formData.endereco.logradouro,
-          tipoLogradouro: formData.endereco.tipoLogradouro,
-          numero: formData.endereco.numero,
-          complemento: formData.endereco.complemento,
-          bairro: formData.endereco.bairro,
-          cidade: formData.endereco.cidade,
-          estado: formData.endereco.estado,
-          cep: formData.endereco.cep,
-          referencia: formData.endereco.referencia
+          logradouro: formData.logradouro,
+          tipoLogradouro: formData.tipoLogradouro,
+          numero: formData.numero,
+          complemento: formData.complemento,
+          bairro: formData.bairro,
+          cidade: formData.cidade,
+          estado: formData.estado,
+          cep: formData.cep,
+          referencia: formData.referencia
         },
         coordenadaGPS: {
-          latitude: formData.coordenadaGPS.latitude ? parseFloat(String(formData.coordenadaGPS.latitude)) : null,
-          longitude: formData.coordenadaGPS.longitude ? parseFloat(String(formData.coordenadaGPS.longitude)) : null
+          latitude: formData.latitude ? parseFloat(String(formData.latitude)) : null,
+          longitude: formData.longitude ? parseFloat(String(formData.longitude)) : null
         }
       };
 
@@ -248,19 +246,19 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
         <TabsList className="w-full justify-start h-auto p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none pb-2">
           <TabsTrigger 
             value="geral" 
-            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             1. Definição do Local
           </TabsTrigger>
           <TabsTrigger 
             value="operacional" 
-            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             2. Operacional
           </TabsTrigger>
           <TabsTrigger 
             value="endereco" 
-            className="rounded-none px-2 py-2 text-sm font-medium text-gray-500 data-[state=active]:text-[#2A362B] data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#2A362B]"
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
             3. Endereço
           </TabsTrigger>
@@ -292,7 +290,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
                         <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Descrição Principal *</Label>
                             <div className="relative">
-                                <Input name="descricao" value={formData.descricao || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" placeholder="Nome fantasia do local" />
+                                <Input name="descricao" value={formData.descricao || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" placeholder="Descrição" />
                                 <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
                             </div>
                         </div>
@@ -357,25 +355,25 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
 
                 <div className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                        <div className="md:col-span-3 space-y-2"><Label className="text-[13px] font-medium text-gray-700">CEP</Label><Input name="endereco.cep" value={formData.endereco?.cep || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm font-mono" placeholder="00000-000" /></div>
-                        <div className="md:col-span-3 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Tipo</Label><Input name="endereco.tipoLogradouro" value={formData.endereco?.tipoLogradouro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Rua, Av..." /></div>
-                        <div className="md:col-span-6 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Logradouro *</Label><Input name="endereco.logradouro" value={formData.endereco?.logradouro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="md:col-span-2 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Nº</Label><Input name="endereco.numero" value={formData.endereco?.numero || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Bairro</Label><Input name="endereco.bairro" value={formData.endereco?.bairro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Cidade</Label><Input name="endereco.cidade" value={formData.endereco?.cidade || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="md:col-span-2 space-y-2"><Label className="text-[13px] font-medium text-gray-700">UF</Label><Input name="endereco.estado" value={formData.endereco?.estado || ""} onChange={handleInputChange} maxLength={2} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm uppercase" /></div>
-                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Complemento</Label><Input name="endereco.complemento" value={formData.endereco?.complemento || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Referência</Label><Input name="endereco.referencia" value={formData.endereco?.referencia || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-3 space-y-2"><Label className="text-[13px] font-medium text-gray-700">CEP</Label><Input name="endereco.cep" value={formData?.cep || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm font-mono" placeholder="00000-000" /></div>
+                        <div className="md:col-span-3 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Tipo</Label><Input name="endereco.tipoLogradouro" value={formData?.tipoLogradouro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Rua, Av..." /></div>
+                        <div className="md:col-span-6 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Logradouro *</Label><Input name="endereco.logradouro" value={formData?.logradouro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-2 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Nº</Label><Input name="endereco.numero" value={formData?.numero || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Bairro</Label><Input name="endereco.bairro" value={formData?.bairro || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Cidade</Label><Input name="endereco.cidade" value={formData?.cidade || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-2 space-y-2"><Label className="text-[13px] font-medium text-gray-700">UF</Label><Input name="endereco.estado" value={formData?.estado || ""} onChange={handleInputChange} maxLength={2} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm uppercase" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Complemento</Label><Input name="endereco.complemento" value={formData?.complemento || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="md:col-span-5 space-y-2"><Label className="text-[13px] font-medium text-gray-700">Referência</Label><Input name="endereco.referencia" value={formData?.referencia || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" step="any" value={formData.coordenadaGPS?.latitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" value={formData.coordenadaGPS?.longitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" step="any" value={formData?.latitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" value={formData?.longitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">URL Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">URL Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
                 </div>
 

@@ -148,7 +148,8 @@ export default function NovoPromotorPage() {
   // --- Validações ---
   const validarEmail = (email: string) => /^[^\s@]+@(gmail\.com|outlook\.com|hotmail\.com|yahoo\.com|icloud\.com)$/i.test(email);
   const validarCEP = (cep: string) => /^\d{5}-?\d{3}$/.test(cep);
-  const validarTelefone = (tel: string) => /^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/.test(tel);
+const validarTelefone = (tel: string) =>
+  /^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/.test(tel);
 
   const validarCampos = (aba: string) => {
     let novosErros: { [key: string]: string } = {}

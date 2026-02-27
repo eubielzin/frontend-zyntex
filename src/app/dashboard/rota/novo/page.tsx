@@ -65,8 +65,8 @@ export default function NovaRotaPage() {
     const fetchDados = async () => {
       try {
         const [resPromotores, resLocais, resTarefas] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor-rota/select`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota-local/select`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/select`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/select`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/select`) // Puxando tarefas da API também
         ]);
         
@@ -174,7 +174,7 @@ export default function NovaRotaPage() {
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8 space-y-8">
             <h2 className="text-lg font-semibold text-gray-800 border-b pb-4">1. Defina as informações gerais</h2>
             <div className="space-y-6 max-w-5xl">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 hidden">
                 <Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(val) => setFormData({...formData, ativo: !!val})} />
                 <Label htmlFor="ativo" className="text-sm font-medium text-gray-700">Rota Ativa</Label>
               </div>
@@ -196,13 +196,13 @@ export default function NovaRotaPage() {
                     className={`flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 bg-white ${loadingTarefas ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {loadingTarefas ? (
-                      <span className="text-sm text-gray-400 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Carregando tarefas...</span>
+                      <span className="text-sm text-gray-400 flex items-center gap-2 hover:bg-[#CF9D09] hover:text-white"><Loader2 className="h-4 w-4 animate-spin"/> Carregando tarefas...</span>
                     ) : (
                       <>
-                        <span className={`text-sm ${formData.tarefaId ? 'text-gray-700' : 'text-gray-400'}`}>
+                        <span className={`text-sm  ${formData.tarefaId ? 'text-gray-700' : 'text-gray-400'}`}>
                           {formData.tarefaId ? tarefasDisponiveis.find(t => t.id === formData.tarefaId)?.nome : "Selecione o tipo de tarefa..."}
                         </span>
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`h-4 w-4 text-gray-400  transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
                       </>
                     )}
                   </div>

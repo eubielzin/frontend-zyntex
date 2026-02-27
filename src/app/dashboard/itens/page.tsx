@@ -58,7 +58,8 @@ import {
 interface Item {
     id: number;
     descricao: string;
-    industriaId?: number; 
+    industriaId?: number;
+    nomeIndustria?: string; // Para mostrar o nome da indústria na tabela
     marca?: string;
     precoSugerido?: number;
     variacao?: number; 
@@ -323,7 +324,7 @@ export default function ListaItensPage() {
                         </TableCell>
                         
                         <TableCell className="text-gray-500 text-sm">
-                        {item.industriaId ? `ID: ${item.industriaId}` : "-"}
+                        {item.nomeIndustria ? `${item.nomeIndustria}` : "-"}
                         </TableCell>
 
                         <TableCell className="text-gray-500 text-sm">
