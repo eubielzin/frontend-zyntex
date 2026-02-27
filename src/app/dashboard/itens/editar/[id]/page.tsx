@@ -27,7 +27,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
   const [formData, setFormData] = useState({
     id: "",
     descricao: "",
-    ativo: true, // Campo Ativo adicionado
+    ativo: true,
     industriaId: "",
     tags: "",
     marca: "",
@@ -36,13 +36,20 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
     variacao: ""
   });
 
+  // --- MÁSCARA DE MOEDA ---
+  const formatarMoeda = (valor: string) => {
+    let v = valor.replace(/\D/g, ""); // Remove tudo que não é dígito
+    if (v === "") return "";
+    const options = { minimumFractionDigits: 2 };
+    return new Intl.NumberFormat('pt-BR', options).format(parseFloat(v) / 100);
+  };
+
   // Carrega os dados do Item e a lista de Indústrias ao iniciar
   useEffect(() => {
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
         
-        // Busca simultânea do Item e das Indústrias para melhor performance
         const [itemRes, industriasRes] = await Promise.all([
             fetch(`${process.env.NEXT_PUBLIC_API_URL}/item/${itemId}`),
             fetch(`${process.env.NEXT_PUBLIC_API_URL}/industria/select`)
@@ -55,12 +62,13 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
         setFormData({
             id: itemData.id,
             descricao: itemData.descricao || "",
-            ativo: itemData.ativo ?? true, // Recebe o status da API
+            ativo: itemData.ativo ?? true,
             industriaId: itemData.industriaId ? String(itemData.industriaId) : "", 
             tags: itemData.tags || "",
             marca: itemData.marca || "",
             codigoEan: itemData.codigoEan || "",
-            precoSugerido: itemData.precoSugerido ? String(itemData.precoSugerido) : "",
+            // Formata o preço vindo do banco (ex: 1500.5 -> 1.500,50)
+            precoSugerido: itemData.precoSugerido ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(itemData.precoSugerido) : "",
             variacao: itemData.variacao ? String(itemData.variacao) : ""
         });
 
@@ -86,7 +94,13 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Se for o campo de preço, aplica a máscara de moeda enquanto digita
+    if (name === "precoSugerido") {
+      setFormData(prev => ({ ...prev, [name]: formatarMoeda(value) }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSave = async () => {
@@ -98,15 +112,18 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
     try {
       setLoadingSalvar(true);
       
+      // Limpa a formatação da moeda para enviar o número pro Java (ex: 1.500,50 -> 1500.50)
+      const precoLimpo = formData.precoSugerido.replace(/\./g, '').replace(',', '.');
+
       const payload = {
         id: Number(itemId),
         descricao: formData.descricao,
-        ativo: formData.ativo, // Envia o status para a API
+        ativo: formData.ativo,
         marca: formData.marca,
         codigoEan: formData.codigoEan,
         tags: formData.tags,
         industriaId: formData.industriaId ? Number(formData.industriaId) : null,
-        precoSugerido: formData.precoSugerido ? parseFloat(formData.precoSugerido) : null,
+        precoSugerido: precoLimpo ? parseFloat(precoLimpo) : null,
         variacao: formData.variacao ? parseFloat(formData.variacao) : null
       };
 
@@ -251,16 +268,16 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
           {/* Linha 3: Valores e Tags */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
-              <Label className="text-[13px] font-medium text-gray-700">Preço Sugerido (R$)</Label>
+              <Label className="text-[13px] font-medium text-gray-700">Preço Sugerido</Label>
               <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-montserrat">R$</div>
                 <Input 
                   name="precoSugerido" 
-                  type="number" 
-                  step="0.01"
+                  type="text" // Mudado de number para text para suportar a máscara
                   value={formData.precoSugerido} 
                   onChange={handleInputChange} 
-                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pr-10" 
-                  placeholder="0.00" 
+                  className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm pl-10 pr-10" 
+                  placeholder="0,00" 
                 />
                 <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
               </div>

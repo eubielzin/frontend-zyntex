@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Label } from "@radix-ui/react-label"
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
