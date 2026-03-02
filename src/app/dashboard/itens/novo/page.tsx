@@ -160,11 +160,11 @@ export default function NovoItemPage() {
                 className="flex h-11 w-full  rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#2A362B] disabled:opacity-50 appearance-none"
                 disabled={loadingIndustrias}
               >
-                <option value="" disabled className="text-gray-400">
+                <option value="" disabled className="text-gray-400  ">
                   {loadingIndustrias ? "Carregando indústrias..." : "Selecione uma indústria..."}
                 </option>
                 {industrias.map((ind) => (
-                  <option key={ind.id} value={ind.id} className="text-black hover:bg-amber-500">
+                  <option key={ind.id} value={ind.id} className="text-black ">
                     {ind.nomeIndustria}
                   </option>
                   

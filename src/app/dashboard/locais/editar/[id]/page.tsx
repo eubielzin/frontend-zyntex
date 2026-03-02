@@ -243,7 +243,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         
         {/* Abas Superiores Minimalistas */}
-        <TabsList className="w-full justify-start h-auto p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none pb-2">
+        <TabsList className="w-full justify-start  p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none ">
           <TabsTrigger 
             value="geral" 
             className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"

@@ -156,7 +156,7 @@ export default function NovoLocalPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         
         {/* Abas Superiores Minimalistas */}
-        <TabsList className="w-full justify-start h-auto p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none pb-2">
+        <TabsList className="w-full justify-start  p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none ">
           <TabsTrigger 
             value="geral" 
             className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
@@ -185,20 +185,7 @@ export default function NovoLocalPage() {
                 
                 <div className="space-y-8">
                     
-                    {/* Componente Mantido Intacto por Pedido Seu */}
-                    <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
-                            <div>
-                                <p className="text-sm font-semibold text-gray-800">Status do Registro</p>
-                                <p className="text-xs text-gray-500">Defina se este local estará disponível imediatamente</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" />
-                            <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer">ATIVO</Label>
-                        </div>
-                    </div>
+        
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">

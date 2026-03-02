@@ -30,12 +30,12 @@ export default function NovaRotaPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("geral");
   const [loading, setLoading] = useState(false);
-  
+  const [isSupOpen, setIsSupOpen] = useState(false)
   // Estados de Loading das APIs
   const [loadingPromotores, setLoadingPromotores] = useState(true);
   const [loadingLocais, setLoadingLocais] = useState(true);
   const [loadingTarefas, setLoadingTarefas] = useState(true);
-  
+  const dropdownSupRef = useRef<HTMLDivElement>(null)
   const [isTarefaOpen, setIsTarefaOpen] = useState(false);
   const dropdownTarefaRef = useRef<HTMLDivElement>(null);
 
@@ -188,42 +188,41 @@ export default function NovaRotaPage() {
               </div>
 
               {/* Select de Tarefa Buscando da API */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Tarefa *</Label>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Tarefa *</Label>
                 <div className="md:col-span-10 relative" ref={dropdownTarefaRef}>
                   <div 
                     onClick={() => setIsTarefaOpen(!isTarefaOpen)} 
-                    className={`flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 bg-white ${loadingTarefas ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
+                      formData.tarefaId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
+                    }`}
                   >
-                    {loadingTarefas ? (
-                      <span className="text-sm text-gray-400 flex items-center gap-2 hover:bg-[#CF9D09] hover:text-white"><Loader2 className="h-4 w-4 animate-spin"/> Carregando tarefas...</span>
-                    ) : (
-                      <>
-                        <span className={`text-sm  ${formData.tarefaId ? 'text-gray-700' : 'text-gray-400'}`}>
-                          {formData.tarefaId ? tarefasDisponiveis.find(t => t.id === formData.tarefaId)?.nome : "Selecione o tipo de tarefa..."}
-                        </span>
-                        <ChevronDown className={`h-4 w-4 text-gray-400  transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
-                      </>
-                    )}
+                    <span className={`text-sm font-montserrat ${formData.tarefaId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
+                      {formData.tarefaId 
+                        ? tarefasDisponiveis.find(t => t.id === Number(formData.tarefaId))?.nome
+                        : "Selecione a tarefa"}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
                   </div>
-                  {isTarefaOpen && !loadingTarefas && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100 max-h-60 overflow-y-auto">
-                      {tarefasDisponiveis.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-gray-500">Nenhuma tarefa encontrada no banco de dados.</div>
-                      ) : (
-                        tarefasDisponiveis.map(tarefa => (
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  
+                  {isTarefaOpen && (
+                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                      {tarefasDisponiveis.map(tarefa => {
+                        const isSelected = formData.tarefaId === tarefa.id;
+                        return (
                           <div 
                             key={tarefa.id} 
-                            onClick={() => {
-                              setFormData({...formData, tarefaId: tarefa.id}); 
-                              setIsTarefaOpen(false);
-                            }} 
-                            className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b last:border-0"
+                            onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} 
+                            className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
+                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
+                            }`}
                           >
-                            {tarefa.nome}
+                            <span>{tarefa.nome}</span>
+                            {isSelected && <Check className="h-4 w-4 text-white" />}
                           </div>
-                        ))
-                      )}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

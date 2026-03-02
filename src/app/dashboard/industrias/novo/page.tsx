@@ -152,9 +152,9 @@ export default function NovaIndustriaPage() {
         <h1 className="text-[22px] font-bold text-[#2A362B] tracking-tight">Adicionar Indústria</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-5">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full ">
         
-        <TabsList className="flex w-full bg-[#F8F9FA] p-1.5 rounded-xl border border-gray-200 mb-6 h-auto">
+        <TabsList className="w-full justify-start  p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none">
           <TabsTrigger 
             value="geral" 
             className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"

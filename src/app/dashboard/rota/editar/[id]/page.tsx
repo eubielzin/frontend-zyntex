@@ -197,7 +197,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         
-        <TabsList className="flex w-full bg-[#F8F9FA] p-1.5 rounded-xl border border-gray-200 mb-6 h-auto">
+        <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-gray-200">
           <TabsTrigger 
             value="geral" 
             className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
@@ -252,19 +252,41 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Tarefa *</Label>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Tarefa *</Label>
                 <div className="md:col-span-10 relative" ref={dropdownTarefaRef}>
-                  <div onClick={() => setIsTarefaOpen(!isTarefaOpen)} className="flex items-center justify-between h-11 border border-gray-200 rounded-md px-3 bg-white cursor-pointer pr-10">
-                    <span className="text-sm">{formData.tarefaId ? tarefasDisponiveis.find(t => t.id === formData.tarefaId)?.nome : "Selecione o tipo de tarefa..."}</span>
+                  <div 
+                    onClick={() => setIsTarefaOpen(!isTarefaOpen)} 
+                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
+                      formData.tarefaId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
+                    }`}
+                  >
+                    <span className={`text-sm font-montserrat ${formData.tarefaId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
+                      {formData.tarefaId 
+                        ? tarefasDisponiveis.find(t => t.id === Number(formData.tarefaId))?.nome
+                        : "Selecione a tarefa"}
+                    </span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
                   </div>
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  
                   {isTarefaOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {tarefasDisponiveis.map((tarefa, index) => (
-                          <div key={`tarefa-${tarefa.id}-${index}`} onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} className="px-4 py-3 hover:bg-[#CF9D09] hover:text-white cursor-pointer text-sm border-b last:border-0">{tarefa.nome}</div>
-                        ))}
+                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                      {tarefasDisponiveis.map(tarefa => {
+                        const isSelected = formData.tarefaId === tarefa.id;
+                        return (
+                          <div 
+                            key={tarefa.id} 
+                            onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} 
+                            className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
+                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
+                            }`}
+                          >
+                            <span>{tarefa.nome}</span>
+                            {isSelected && <Check className="h-4 w-4 text-white" />}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

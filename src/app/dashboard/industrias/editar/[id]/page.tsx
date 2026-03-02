@@ -167,7 +167,7 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         
-        <TabsList className="flex w-full bg-[#F8F9FA] p-1.5 rounded-xl border border-gray-200 mb-6 h-auto">
+        <TabsList className="w-full justify-start  p-0 bg-transparent gap-6 mb-6 border-b border-gray-200 rounded-none">
           <TabsTrigger 
             value="geral" 
             className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"

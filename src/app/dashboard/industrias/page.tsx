@@ -230,7 +230,7 @@ export default function ListaIndustriasPage() {
     <div className="space-y-6">
       
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Indústrias</h1>
+        <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight font-montserrat">Indústrias</h1>
         <Badge variant="secondary" className="bg-[#BFD8C5] text-[#3E583D] hover:bg-green-100 px-3 py-1 rounded-full text-xs font-normal w-fit">
           {loading ? "Carregando..." : `${totalElements} registros`}
         </Badge>
