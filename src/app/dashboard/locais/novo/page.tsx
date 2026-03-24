@@ -15,6 +15,11 @@ export default function NovoLocalPage() {
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
 
+  const getApiUrl = () => {
+    const base = process.env.NEXT_PUBLIC_API_URL || "";
+    return base.endsWith("/api") ? `${base}/local` : `${base}/api/local`;
+  };
+
   const [formData, setFormData] = useState({
     descricao: "",
     ativo: true,
@@ -128,7 +133,7 @@ export default function NovoLocalPage() {
         horarioSaida: formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida
       };
 
-      const response = await fetch("https://zyntex-api.onrender.com/api/local", {
+      const response = await fetch(getApiUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
