@@ -54,6 +54,9 @@ import {
 interface Tarefa {
     id: number;
     nome: string;
+    ativo?: boolean;
+    idIndustria?: number | null;
+    nomeIndustria?: string | null;
 }
 
 export default function ListaTarefasPage() {
@@ -75,7 +78,6 @@ export default function ListaTarefasPage() {
         return base.endsWith("/api") ? `${base}/tarefa` : `${base}/api/tarefa`;
     };
 
-    // Função de Busca Paginada
     const fetchTarefas = async (page: number) => {
         try {
             setLoading(true);
@@ -83,13 +85,17 @@ export default function ListaTarefasPage() {
             
             if (response.ok) {
                 const data = await response.json();
-                // Estrutura do Spring Pageable
                 setTarefas(data.content || []);
                 setTotalPages(data.totalPages || 1);
                 setCurrentPage(data.number || 0);
                 setTotalElements(data.totalElements || 0);
             } else {
-                console.error("Erro ao carregar tarefas da API");
+                const errText = await response.text();
+                console.error("Erro ao carregar tarefas da API", {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errText,
+                });
             }
         } catch (error) {
             console.error("Erro de conexão", error);
@@ -154,7 +160,8 @@ export default function ListaTarefasPage() {
 
     const tarefasFiltradas = tarefas.filter(tarefa => 
         tarefa.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-        tarefa.id?.toString().includes(busca)
+        tarefa.id?.toString().includes(busca) ||
+        tarefa.nomeIndustria?.toLowerCase().includes(busca.toLowerCase())
     );
 
     // Lógica visual para os números da paginação
@@ -210,14 +217,9 @@ export default function ListaTarefasPage() {
                             />
                         </div>
                         
-                        {busca && (
-                            <p 
-                                onClick={() => setBusca("")} 
-                                className="text-black font-bold cursor-pointer hover:underline text-sm whitespace-nowrap"
-                            >
-                                Limpar Busca
-                            </p>
-                        )}
+                        <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
+                            Pesquisa Avançada
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto">
@@ -271,7 +273,7 @@ export default function ListaTarefasPage() {
                                 </TableHead>
                                 <TableHead className="min-w-50 font-montserrat font-medium text-xs text-gray-600 uppercase">ID</TableHead>
                                 <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Nome</TableHead>
-                                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase"></TableHead>
+                                <TableHead className="min-w-[200px] font-montserrat font-medium text-xs text-gray-600 uppercase">Industria</TableHead>
                                 <TableHead className="text-right uppercase text-xs text-gray-600 font-medium">Ações</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -303,7 +305,15 @@ export default function ListaTarefasPage() {
                                             {tarefa.nome}
                                         </TableCell>
                                         
-                                        <TableCell></TableCell>
+                                        <TableCell>
+                                            {tarefa.nomeIndustria ? (
+                                                <div  className=" text-gray-500 text-sm">
+                                                    {tarefa.nomeIndustria}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400  text-sm">Sem indústria</span>
+                                            )}
+                                        </TableCell>
 
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-1 mr-4">

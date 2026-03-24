@@ -1,190 +1,296 @@
 "use client"
-import { ChevronLeft, Save, Loader2, ListTodo, Activity, Hash, Info } from "lucide-react"
+
+import { Activity, Check, ChevronDown, ChevronLeft, Hash, Info, ListTodo, Loader2, Save } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { use, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
 
-const COR_SELECAO = "#cf9d09";
+const COR_SELECAO = "#cf9d09"
+
+interface Industria {
+  id: number
+  nomeIndustria: string
+}
 
 export default function EditarTarefaPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const tarefaId = resolvedParams.id;
-  const router = useRouter();
+  const resolvedParams = use(params)
+  const tarefaId = resolvedParams.id
+  const router = useRouter()
+  const dropdownIndustriaRef = useRef<HTMLDivElement>(null)
 
-  const [loadingInicial, setLoadingInicial] = useState(true);
-  const [loadingSalvar, setLoadingSalvar] = useState(false);
+  const getTarefaApiUrl = () => {
+    const base = process.env.NEXT_PUBLIC_API_URL || ""
+    return base.endsWith("/api") ? `${base}/tarefa` : `${base}/api/tarefa`
+  }
 
-  // Estado simples contendo Nome e Ativo
+  const getIndustriaApiUrl = () => {
+    const base = process.env.NEXT_PUBLIC_API_URL || ""
+    return base.endsWith("/api") ? `${base}/industria` : `${base}/api/industria`
+  }
+
+  const [loadingInicial, setLoadingInicial] = useState(true)
+  const [loadingSalvar, setLoadingSalvar] = useState(false)
+  const [loadingIndustrias, setLoadingIndustrias] = useState(true)
+  const [isIndustriaOpen, setIsIndustriaOpen] = useState(false)
+  const [industrias, setIndustrias] = useState<Industria[]>([])
   const [formData, setFormData] = useState({
     nome: "",
-    ativo: true // Adicionado o campo ativo
-  });
+    ativo: true,
+    idIndustria: "",
+  })
 
-  // Busca os dados da tarefa existente no banco
   useEffect(() => {
-    const carregarTarefa = async () => {
-      try {
-        setLoadingInicial(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/${tarefaId}`);
-        if (!response.ok) throw new Error("Tarefa não encontrada");
-        
-        const data = await response.json();
-        setFormData({
-          nome: data.nome || "",
-          ativo: data.ativo ?? true // Puxa o status da API
-        });
-      } catch (error) {
-        console.error("Erro ao carregar:", error);
-        alert("Erro ao carregar a tarefa. Ela pode ter sido excluída.");
-        router.push("/dashboard/tarefas");
-      } finally {
-        setLoadingInicial(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownIndustriaRef.current && !dropdownIndustriaRef.current.contains(event.target as Node)) {
+        setIsIndustriaOpen(false)
       }
-    };
-    if (tarefaId) carregarTarefa();
-  }, [tarefaId, router]);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        setLoadingInicial(true)
+        setLoadingIndustrias(true)
+
+        const [tarefaResponse, industriasResponse] = await Promise.all([
+          fetch(`${getTarefaApiUrl()}/${tarefaId}`),
+          fetch(`${getIndustriaApiUrl()}/select`),
+        ])
+
+        if (!tarefaResponse.ok) {
+          throw new Error("Tarefa não encontrada")
+        }
+
+        const tarefa = await tarefaResponse.json()
+        const industriasData = industriasResponse.ok ? await industriasResponse.json() : []
+
+        setIndustrias(industriasData)
+        setFormData({
+          nome: tarefa.nome || "",
+          ativo: tarefa.ativo ?? true,
+          idIndustria: tarefa.idIndustria ? String(tarefa.idIndustria) : "",
+        })
+      } catch (error) {
+        console.error("Erro ao carregar:", error)
+        alert("Erro ao carregar a tarefa. Ela pode ter sido excluída.")
+        router.push("/dashboard/tarefas")
+      } finally {
+        setLoadingInicial(false)
+        setLoadingIndustrias(false)
+      }
+    }
+
+    if (tarefaId) {
+      carregarDados()
+    }
+  }, [tarefaId, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleSave = async () => {
     if (!formData.nome.trim()) {
-      alert("A descrição da tarefa é obrigatória.");
-      return;
+      alert("A descrição da tarefa é obrigatória.")
+      return
+    }
+
+    if (!formData.idIndustria) {
+      alert("Selecione uma indústria para continuar.")
+      return
     }
 
     try {
-      setLoadingSalvar(true);
-      
-      // Enviando o ID, Nome atualizado e o status Ativo
+      setLoadingSalvar(true)
+
       const payload = {
         id: Number(tarefaId),
         nome: formData.nome,
-        ativo: formData.ativo
-      };
+        ativo: formData.ativo,
+        industriaId: Number(formData.idIndustria),
+      }
 
-      // Se o seu backend estiver usando PATCH para tarefas, troque o método abaixo.
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/${tarefaId}`, {
-        method: "PUT", 
+      const response = await fetch(`${getTarefaApiUrl()}/${tarefaId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      
+        body: JSON.stringify(payload),
+      })
+
       if (response.ok) {
-        router.push("/dashboard/tarefas");
-        router.refresh();
+        router.push("/dashboard/tarefas")
+        router.refresh()
       } else {
-        const errText = await response.text();
-        console.error("Erro API:", errText);
-        alert("Erro ao salvar as alterações no servidor.");
+        const errText = await response.text()
+        console.error("Erro API:", errText)
+        alert("Erro ao salvar as alterações no servidor.")
       }
     } catch (error) {
-      console.error("Erro de conexão:", error);
-      alert("Falha de conexão com o servidor Render.");
+      console.error("Erro de conexão:", error)
+      alert("Falha de conexão com o servidor.")
     } finally {
-      setLoadingSalvar(false);
+      setLoadingSalvar(false)
     }
-  };
+  }
+
+  const industriaSelecionada = industrias.find((industria) => industria.id === Number(formData.idIndustria))
 
   if (loadingInicial) {
-    return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>;
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6 font-montserrat p-6 max-w-4xl mx-auto animate-in fade-in duration-500">
-      {/* Cabeçalho */}
+    <div className="mx-auto max-w-4xl space-y-6 p-6 font-montserrat animate-in fade-in duration-500">
       <div className="flex items-center gap-4 border-b pb-4">
-        <Button variant="ghost" size="icon" asChild className="h-10 w-10 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
-          <Link href="/dashboard/tarefas"><ChevronLeft className="h-6 w-6" /></Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="h-10 w-10 rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+        >
+          <Link href="/dashboard/tarefas">
+            <ChevronLeft className="h-6 w-6" />
+          </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-[#2A362B] font-montserrat tracking-tight">Editar Tarefa</h1>
-          <p className="text-sm text-gray-500">Ajustando os detalhes da tarefa #{tarefaId}</p>
+          <h1 className="font-montserrat text-2xl font-bold tracking-tight text-[#2A362B]">Editar Tarefa</h1>
+          <p className="text-sm text-gray-500">Atualize os dados da tarefa #{tarefaId}</p>
         </div>
       </div>
 
-      {/* Card Principal */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-8 space-y-8">
-          
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="space-y-8 p-8">
           <div className="flex items-center gap-2 border-b pb-4">
-            <div className="bg-[#2A362B] p-1.5 rounded-md text-white">
+            <div className="rounded-md bg-[#2A362B] p-1.5 text-white">
               <ListTodo className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-semibold text-gray-800">Detalhes da Atividade</h2>
           </div>
 
-          {/* CARD DE STATUS ATIVO ESTILIZADO */}
-          <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-              <div className="flex items-center gap-3">
-                  <div className="bg-[#2A362B] p-2 rounded-lg text-white"><Info className="h-5 w-5" /></div>
-                  <div>
-                      <p className="text-sm font-semibold text-gray-800 font-montserrat">Status da Tarefa</p>
-                      <p className="text-xs text-gray-500 font-montserrat">Defina se esta tarefa estará disponível no sistema</p>
-                  </div>
+          <div className="flex items-center justify-between rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-[#2A362B] p-2 text-white">
+                <Info className="h-5 w-5" />
               </div>
-              <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="ativo" 
-                    checked={formData.ativo} 
-                    onCheckedChange={(v) => setFormData({...formData, ativo: !!v})} 
-                    className="h-5 w-5 data-[state=checked]:bg-[#2A362B]" 
-                  />
-                  <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer font-montserrat">ATIVO</Label>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Status da Tarefa</p>
+                <p className="text-xs text-gray-500">Defina se esta tarefa estará disponível no sistema</p>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="ativo"
+                checked={formData.ativo}
+                onCheckedChange={(value) => setFormData((prev) => ({ ...prev, ativo: !!value }))}
+                className="h-5 w-5 data-[state=checked]:bg-[#2A362B]"
+              />
+              <Label htmlFor="ativo" className="cursor-pointer text-sm font-bold text-[#2A362B]">
+                ATIVO
+              </Label>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* Campo ID (Apenas leitura) */}
-            <div className="md:col-span-3 space-y-2">
-              <Label className="text-[11px] font-bold uppercase text-gray-400 tracking-wider flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
+            <div className="space-y-2 md:col-span-3">
+              <Label className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
                 <Hash className="h-3 w-3" /> ID
               </Label>
-              <Input 
-                value={tarefaId} 
-                disabled 
-                className="h-12 border-gray-200 bg-gray-50 text-gray-500 font-mono select-none" 
+              <Input value={tarefaId} disabled className="h-12 select-none border-gray-200 bg-gray-50 font-mono text-gray-500" />
+            </div>
+
+            <div className="space-y-2 md:col-span-5">
+              <Label className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                <Activity className="h-3 w-3" /> Descrição da Tarefa *
+              </Label>
+              <Input
+                name="nome"
+                value={formData.nome}
+                onChange={handleInputChange}
+                className="h-12 border-gray-200 text-base focus:border-[#2A362B]"
+                placeholder="Ex: Auditoria de Estoque"
               />
             </div>
 
-            {/* Campo Nome (Editável) */}
-            <div className="md:col-span-9 space-y-2">
-              <Label className="text-[11px] font-bold uppercase text-gray-400 tracking-wider flex items-center gap-2">
-                <Activity className="h-3 w-3" /> Descrição da Tarefa *
+            <div className="space-y-2 md:col-span-4">
+              <Label className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                <Activity className="h-3 w-3" /> Indústria *
               </Label>
-              <Input 
-                name="nome" 
-                value={formData.nome} 
-                onChange={handleInputChange} 
-                className="h-12 border-gray-200 focus:border-[#2A362B] text-base font-medium" 
-                placeholder="Ex: Auditoria de Estoque" 
-              />
+
+              <div ref={dropdownIndustriaRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsIndustriaOpen((prev) => !prev)}
+                  disabled={loadingIndustrias}
+                  className={`flex h-12 w-full items-center justify-between rounded-md border bg-white px-3 text-left text-sm transition-colors ${
+                    formData.idIndustria ? "border-[#2A362B] text-[#2A362B]" : "border-gray-200 text-gray-500"
+                  } ${loadingIndustrias ? "cursor-not-allowed opacity-50" : "hover:border-[#cf9d09] hover:bg-[#fff7dd]"}`}
+                >
+                  <span className={formData.idIndustria ? "font-semibold" : ""}>
+                    {loadingIndustrias
+                      ? "Carregando indústrias..."
+                      : industriaSelecionada?.nomeIndustria || "Selecione uma indústria..."}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isIndustriaOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isIndustriaOpen && !loadingIndustrias && (
+                  <div className="absolute z-40 mt-1 max-h-56 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                    {industrias.map((industria) => {
+                      const isSelected = formData.idIndustria === String(industria.id)
+
+                      return (
+                        <button
+                          key={industria.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, idIndustria: String(industria.id) }))
+                            setIsIndustriaOpen(false)
+                          }}
+                          className={`flex w-full items-center justify-between border-b px-4 py-3 text-left text-sm transition-colors last:border-b-0 ${
+                            isSelected
+                              ? "bg-[#cf9d09] font-bold text-white"
+                              : "text-gray-700 hover:bg-[#cf9d09] hover:text-white"
+                          }`}
+                        >
+                          <span>{industria.nomeIndustria}</span>
+                          {isSelected && <Check className="h-4 w-4" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Rodapé de Ações */}
-        <div className="bg-gray-50 p-6 flex justify-end gap-4 border-t border-gray-100">
-          <Button variant="ghost" asChild className="text-gray-500 font-medium h-12 px-6">
+        <div className="flex justify-end gap-4 border-t border-gray-100 bg-gray-50 p-6">
+          <Button variant="ghost" asChild className="h-12 px-6 font-medium text-gray-500">
             <Link href="/dashboard/tarefas">Cancelar</Link>
           </Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={loadingSalvar} 
-            className="text-white px-8 h-12 rounded-xl font-bold shadow-lg transition-transform hover:scale-[1.02] active:scale-95 flex items-center gap-2" 
+          <Button
+            onClick={handleSave}
+            disabled={loadingSalvar}
+            className="flex h-12 items-center gap-2 rounded-xl px-8 font-bold text-white shadow-lg transition-all hover:scale-[1.02] hover:brightness-95 active:scale-95"
             style={{ backgroundColor: COR_SELECAO }}
           >
-            {loadingSalvar ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />} 
+            {loadingSalvar ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
             Salvar Alterações
           </Button>
         </div>
       </div>
     </div>
-  );
+  )
 }

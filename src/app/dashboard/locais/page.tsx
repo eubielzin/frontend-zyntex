@@ -223,14 +223,9 @@ export default function ListaLocaisPage() {
                 />
             </div>
 
-            {busca && (
-              <p 
-                  onClick={() => setBusca("")} 
-                  className="text-black font-bold cursor-pointer hover:underline text-sm whitespace-nowrap"
-              >
-                    Limpar Busca
+              <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
+                Pesquisa Avançada
               </p>
-            )}
 
           </div>
 

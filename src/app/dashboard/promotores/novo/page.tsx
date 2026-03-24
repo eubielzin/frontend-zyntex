@@ -470,7 +470,7 @@ const validarTelefone = (tel: string) =>
                 disabled={loading} 
                 className="bg-[#cf9d09] hover:bg-[#b88c08] text-white px-8 py-6 rounded-md font-montserrat text-sm font-medium transition-colors shadow-none"
               >
-                {loading ? "Salvando..." : "Salvar alterações"}
+                {loading ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </div>

@@ -232,14 +232,9 @@ export default function ListaItensPage() {
                 className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0" 
               />
             </div>
-            {busca && (
-                <p 
-                    onClick={() => setBusca("")} 
-                    className="text-black font-kamerik font-bold hidden md:flex cursor-pointer hover:underline text-sm whitespace-nowrap"
-                >
-                    Limpar busca
-                </p>
-            )}
+              <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
+                Pesquisa Avançada
+              </p>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">

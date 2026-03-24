@@ -240,11 +240,11 @@ export default function ListaPromotoresPage() {
                   />
             </div>
             
-            {termoBusca && (
-              <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => { setTermoBusca(""); setCurrentPage(0); }}>
-                Limpar Busca
+
+              <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
+                Pesquisa Avançada
               </p>
-            )}
+
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">

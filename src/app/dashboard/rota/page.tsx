@@ -203,17 +203,15 @@ export default function RotaPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 type="search"
-                placeholder="Buscar pela descrição na página..."
+                placeholder="Buscar pela descrição  ou ID..."
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
                 className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
               />
             </div>
-            {termoBusca && (
-              <p className="text-black font-bold hidden md:flex cursor-pointer hover:underline text-sm" onClick={() => { setTermoBusca(""); setCurrentPage(0); }}>
-                Limpar Busca
+              <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
+                Pesquisa Avançada
               </p>
-            )}
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">

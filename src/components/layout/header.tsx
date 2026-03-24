@@ -67,12 +67,8 @@ export function DashboardHeader() {
                  
                 </span>
               </div>
-              <div className="flex flex-row justify-between w-[100px]">
-                <Button variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                    <Search className="size-6"/>  
-                </Button>
+              <div className="flex flex-row justify-between w-[65px]">
+
                 
                 <Button variant="ghost" 
                         size="icon" 
@@ -83,7 +79,7 @@ export function DashboardHeader() {
                 <Button variant="ghost" 
                         size="icon" 
                         className="text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                    <Settings className="mr-2 size-6" />
+                    <Settings className="mr-1 size-6" />
                 </Button>
                 
               </div>

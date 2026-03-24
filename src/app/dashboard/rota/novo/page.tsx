@@ -57,7 +57,7 @@ export default function NovaRotaPage() {
     idIntegracao: "",
     ordemExibicao: 1,
     diasExecucao: [] as string[],
-    tarefaId: null as number | null, 
+    tarefaId: null as number | null,
   });
 
   // Busca todos os dados das APIs ao carregar a página
@@ -69,16 +69,16 @@ export default function NovaRotaPage() {
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/select`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/select`) // Puxando tarefas da API também
         ]);
-        
+
         if (resPromotores.ok) setPromotoresDisponiveis(await resPromotores.json());
         if (resLocais.ok) setLocaisDisponiveis(await resLocais.json());
         if (resTarefas.ok) setTarefasDisponiveis(await resTarefas.json());
 
-      } catch (error) { 
-        console.error("Erro ao carregar dados", error); 
-      } finally { 
-        setLoadingPromotores(false); 
-        setLoadingLocais(false); 
+      } catch (error) {
+        console.error("Erro ao carregar dados", error);
+      } finally {
+        setLoadingPromotores(false);
+        setLoadingLocais(false);
         setLoadingTarefas(false);
       }
     };
@@ -110,7 +110,7 @@ export default function NovaRotaPage() {
 
     try {
       setLoading(true);
-      
+
       // Montando o JSON exatamente como o seu RotaDto Java espera
       const payload = {
         descricao: formData.descricao,
@@ -118,13 +118,13 @@ export default function NovaRotaPage() {
         idIntegracao: formData.idIntegracao,
         ordemExibicao: formData.ordemExibicao,
         diasExecucao: formData.diasExecucao,
-        tarefaId: formData.tarefaId, 
-        
+        tarefaId: formData.tarefaId,
+
         locais: locaisSelecionados.map(l => ({
           localId: l.id,
           ativo: true
         })),
-        
+
         promotores: promotoresSelecionados.map(p => ({
           promotorId: p.id,
           ativo: true,
@@ -147,10 +147,10 @@ export default function NovaRotaPage() {
         console.error("Erro da API:", errorText);
         alert(`Erro ao salvar. O servidor retornou: ${errorText}`);
       }
-    } catch (error) { 
-      console.error(error); 
-    } finally { 
-      setLoading(false); 
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,48 +175,46 @@ export default function NovaRotaPage() {
             <h2 className="text-lg font-semibold text-gray-800 border-b pb-4">1. Defina as informações gerais</h2>
             <div className="space-y-6 max-w-5xl">
               <div className="flex items-center gap-2 hidden">
-                <Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(val) => setFormData({...formData, ativo: !!val})} />
+                <Checkbox id="ativo" checked={formData.ativo} onCheckedChange={(val) => setFormData({ ...formData, ativo: !!val })} />
                 <Label htmlFor="ativo" className="text-sm font-medium text-gray-700">Rota Ativa</Label>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium text-sm">Descrição *</Label>
                 <div className="md:col-span-10 relative">
-                  <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} className="h-11" placeholder="Ex: Rota Região Santa Negra" />
+                  <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} className="h-11" placeholder="Ex: Rota Região Santa Negra" />
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
 
               {/* Select de Tarefa Buscando da API */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Tarefa *</Label>
                 <div className="md:col-span-10 relative" ref={dropdownTarefaRef}>
-                  <div 
-                    onClick={() => setIsTarefaOpen(!isTarefaOpen)} 
-                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
-                      formData.tarefaId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
-                    }`}
+                  <div
+                    onClick={() => setIsTarefaOpen(!isTarefaOpen)}
+                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${formData.tarefaId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
+                      }`}
                   >
                     <span className={`text-sm font-montserrat ${formData.tarefaId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
-                      {formData.tarefaId 
+                      {formData.tarefaId
                         ? tarefasDisponiveis.find(t => t.id === Number(formData.tarefaId))?.nome
                         : "Selecione a tarefa"}
                     </span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
                   </div>
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                  
+
                   {isTarefaOpen && (
                     <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
                       {tarefasDisponiveis.map(tarefa => {
                         const isSelected = formData.tarefaId === tarefa.id;
                         return (
-                          <div 
-                            key={tarefa.id} 
-                            onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} 
-                            className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
-                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
-                            }`}
+                          <div
+                            key={tarefa.id}
+                            onClick={() => { setFormData({ ...formData, tarefaId: tarefa.id }); setIsTarefaOpen(false) }}
+                            className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
+                              }`}
                           >
                             <span>{tarefa.nome}</span>
                             {isSelected && <Check className="h-4 w-4 text-white" />}
@@ -231,11 +229,11 @@ export default function NovaRotaPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className="text-gray-600 font-medium text-sm">ID para Integração</Label>
-                  <Input value={formData.idIntegracao} onChange={(e) => setFormData({...formData, idIntegracao: e.target.value})} placeholder="ROT-000" className="h-11" />
+                  <Input value={formData.idIntegracao} onChange={(e) => setFormData({ ...formData, idIntegracao: e.target.value })} placeholder="ROT-000" className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-600 font-medium text-sm">Ordem de Exibição</Label>
-                  <Input type="number" value={formData.ordemExibicao} onChange={(e) => setFormData({...formData, ordemExibicao: Number(e.target.value)})} className="h-11" />
+                  <Input type="number" value={formData.ordemExibicao} onChange={(e) => setFormData({ ...formData, ordemExibicao: Number(e.target.value) })} className="h-11" />
                 </div>
               </div>
 
@@ -268,7 +266,7 @@ export default function NovaRotaPage() {
                 <div className="p-2 border-b bg-gray-50/50"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" /><Input placeholder="Filtrar..." value={buscaPessoa} onChange={(e) => setBuscaPessoa(e.target.value)} className="pl-9 h-9 text-xs" /></div></div>
                 <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
                   {loadingPromotores ? <div className="flex items-center justify-center h-full"><Loader2 className="h-4 w-4 animate-spin" /></div> : (promotoresDisponiveis || []).filter(p => p?.nome?.toLowerCase().includes(buscaPessoa.toLowerCase())).map(p => (
-                    <div key={p.id} className="flex items-center justify-between p-3 hover:bg-gray-50"><span className="text-sm">{p.nome}</span><Button onClick={() => {setPromotoresSelecionados([...promotoresSelecionados, p]); setPromotoresDisponiveis(promotoresDisponiveis.filter(i => i.id !== p.id))}} size="icon" variant="ghost" className="h-7 w-7 text-green-600"><Plus className="h-4 w-4" /></Button></div>
+                    <div key={p.id} className="flex items-center justify-between p-3 hover:bg-gray-50"><span className="text-sm">{p.nome}</span><Button onClick={() => { setPromotoresSelecionados([...promotoresSelecionados, p]); setPromotoresDisponiveis(promotoresDisponiveis.filter(i => i.id !== p.id)) }} size="icon" variant="ghost" className="h-7 w-7 text-green-600"><Plus className="h-4 w-4" /></Button></div>
                   ))}
                 </div>
               </div>
@@ -276,7 +274,7 @@ export default function NovaRotaPage() {
                 <div className="bg-[#2E3D2A] p-3 border-b text-xs font-bold text-white uppercase">Selecionados ({promotoresSelecionados.length})</div>
                 <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
                   {promotoresSelecionados.map(p => (
-                    <div key={p.id} className="flex items-center justify-between p-3 bg-green-50/30"><span className="text-sm font-semibold text-[#2A362B]">{p.nome}</span><Button onClick={() => {setPromotoresDisponiveis([...promotoresDisponiveis, p]); setPromotoresSelecionados(promotoresSelecionados.filter(i => i.id !== p.id))}} size="icon" variant="ghost" className="h-7 w-7 text-red-500"><X className="h-4 w-4" /></Button></div>
+                    <div key={p.id} className="flex items-center justify-between p-3 bg-green-50/30"><span className="text-sm font-semibold text-[#2A362B]">{p.nome}</span><Button onClick={() => { setPromotoresDisponiveis([...promotoresDisponiveis, p]); setPromotoresSelecionados(promotoresSelecionados.filter(i => i.id !== p.id)) }} size="icon" variant="ghost" className="h-7 w-7 text-red-500"><X className="h-4 w-4" /></Button></div>
                   ))}
                 </div>
               </div>
@@ -298,7 +296,7 @@ export default function NovaRotaPage() {
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{l.descricao}</span>
                       </div>
-                      <Button onClick={() => {setLocaisSelecionados([...locaisSelecionados, l]); setLocaisDisponiveis(locaisDisponiveis.filter(i => i.id !== l.id))}} size="icon" variant="ghost" className="h-7 w-7 text-green-600"><Plus className="h-4 w-4" /></Button>
+                      <Button onClick={() => { setLocaisSelecionados([...locaisSelecionados, l]); setLocaisDisponiveis(locaisDisponiveis.filter(i => i.id !== l.id)) }} size="icon" variant="ghost" className="h-7 w-7 text-green-600"><Plus className="h-4 w-4" /></Button>
                     </div>
                   ))}
                 </div>
@@ -309,7 +307,7 @@ export default function NovaRotaPage() {
                   {locaisSelecionados.map(l => (
                     <div key={l.id} className="flex items-center justify-between p-3 bg-green-50/30">
                       <span className="text-sm font-semibold text-[#2A362B]">{l.descricao}</span>
-                      <Button onClick={() => {setLocaisDisponiveis([...locaisDisponiveis, l]); setLocaisSelecionados(locaisSelecionados.filter(i => i.id !== l.id))}} size="icon" variant="ghost" className="h-7 w-7 text-red-500"><X className="h-4 w-4" /></Button>
+                      <Button onClick={() => { setLocaisDisponiveis([...locaisDisponiveis, l]); setLocaisSelecionados(locaisSelecionados.filter(i => i.id !== l.id)) }} size="icon" variant="ghost" className="h-7 w-7 text-red-500"><X className="h-4 w-4" /></Button>
                     </div>
                   ))}
                 </div>

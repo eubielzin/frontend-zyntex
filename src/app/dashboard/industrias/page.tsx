@@ -241,27 +241,22 @@ export default function ListaIndustriasPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-            <div className="relative">
+            <div className="relative w-full md:w-80">
               <Input 
                 type="search" 
-                placeholder="Buscar indústria..." 
+                placeholder="Buscar indústria na página..." 
                 value={busca}
                 onChange={(e) => {
                     setBusca(e.target.value);
                     setCurrentPage(0); // Reseta a paginação ao buscar
                 }}
-                className="pl-10 h-[45px] w-72 bg-white border-gray-200 focus-visible:ring-0" 
+                className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0" 
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
             </div>
-            {busca && (
-              <p 
-                  onClick={() => { setBusca(""); setCurrentPage(0); }} 
-                  className="text-black font-bold cursor-pointer hover:underline text-sm whitespace-nowrap hidden md:block"
-              >
-                    Limpar Busca
+              <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
+                Pesquisa Avançada
               </p>
-            )}
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
