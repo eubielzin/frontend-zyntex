@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
 
 const COR_SELECAO = "#cf9d09";
 
@@ -28,6 +29,10 @@ interface Tarefa { id: number; nome: string } // Tarefa agora vem da API
 
 export default function NovaRotaPage() {
   const router = useRouter();
+  const rotaApiUrl = buildApiUrl("/rota");
+  const promotorSelectApiUrl = buildApiUrl("/promotor/select");
+  const localSelectApiUrl = buildApiUrl("/local/select");
+  const tarefaSelectApiUrl = buildApiUrl("/tarefa/select");
   const [activeTab, setActiveTab] = useState("geral");
   const [loading, setLoading] = useState(false);
   const [isSupOpen, setIsSupOpen] = useState(false)
@@ -65,9 +70,9 @@ export default function NovaRotaPage() {
     const fetchDados = async () => {
       try {
         const [resPromotores, resLocais, resTarefas] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/select`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/select`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/select`) // Puxando tarefas da API também
+          fetch(promotorSelectApiUrl),
+          fetch(localSelectApiUrl),
+          fetch(tarefaSelectApiUrl)
         ]);
 
         if (resPromotores.ok) setPromotoresDisponiveis(await resPromotores.json());
@@ -134,7 +139,7 @@ export default function NovaRotaPage() {
 
       console.log("Enviando JSON para a API:", payload);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota`, {
+      const response = await fetch(rotaApiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
+import { fetchCepData } from "@/lib/cep"
 
 const COR_SELECAO = "#cf9d09";
 
@@ -20,8 +22,7 @@ export default function NovaIndustriaPage() {
   // URL ajustada para o seu Controller Java: @RequestMapping("/api/industria")
   // Adicionado tratamento para não duplicar o /api caso já exista na variável de ambiente
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/industria` : `${base}/industria`;
+    return buildApiUrl("/industria");
   };
 
   // Estado inicial baseado rigorosamente no IndustriaDto atualizado
@@ -53,22 +54,21 @@ export default function NovaIndustriaPage() {
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
   const formatCNPJ = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2").slice(0, 18);
 
-  // Busca ViaCEP
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;
     try {
       setLoadingCep(true);
-      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
+      const data = await fetchCepData(cepLimpo);
+      if (data) {
         setFormData(prev => ({
           ...prev,
           endereco: {
             ...prev.endereco,
             logradouro: data.logradouro || prev.endereco.logradouro,
+            tipoLogradouro: data.tipoLogradouro || prev.endereco.tipoLogradouro,
             bairro: data.bairro || prev.endereco.bairro,
-            cidade: data.localidade || prev.endereco.cidade,
-            estado: data.uf || prev.endereco.estado
+            cidade: data.cidade || prev.endereco.cidade,
+            estado: data.estado || prev.endereco.estado
           }
         }));
       }

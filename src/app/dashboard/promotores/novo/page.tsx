@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
+import { fetchCepData } from "@/lib/cep"
 
 const COR_SELECAO = "#cf9d09";
 // --- Interfaces ---
@@ -46,6 +48,7 @@ const ESTADOS_BR = [
 
 export default function NovoPromotorPage() {
   const router = useRouter();
+  const promotorApiUrl = buildApiUrl("/promotor");
   const [activeTab, setActiveTab] = useState("login")
   const [supervisores, setSupervisores] = useState<Supervisor[]>([])
   const [rotasApi, setRotasApi] = useState<Rota[]>([])
@@ -125,18 +128,17 @@ export default function NovoPromotorPage() {
     const cepLimpo = cepDigitado.replace(/\D/g, "");
     if (cepLimpo.length === 8) {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const data = await response.json();
-        if (!data.erro) {
+        const data = await fetchCepData(cepLimpo);
+        if (data) {
           setFormData(prev => ({
             ...prev,
             endereco: {
               ...prev.endereco,
               logradouro: data.logradouro,
+              tipoLogradouro: data.tipoLogradouro,
               bairro: data.bairro,
-              cidade: data.localidade,
-              estado: data.uf.toUpperCase(), 
-              tipoLogradouro: data.logradouro.split(" ")[0] || ""
+              cidade: data.cidade,
+              estado: data.estado
             }
           }));
           if (errors.cep) setErrors(prev => ({ ...prev, cep: "" }));
@@ -187,8 +189,8 @@ const validarTelefone = (tel: string) =>
     const fetchData = async () => {
       try {
         const [supRes, rotasRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/supervisores`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota`) 
+          fetch(buildApiUrl("/usuario/supervisores")),
+          fetch(buildApiUrl("/rota")) 
         ]);
         if (supRes.ok) setSupervisores(await supRes.json());
         if (rotasRes.ok) setRotasApi(await rotasRes.json());
@@ -222,7 +224,7 @@ const validarTelefone = (tel: string) =>
         rotasIds: rotasSelecionadas 
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor`, {
+      const response = await fetch(promotorApiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend)

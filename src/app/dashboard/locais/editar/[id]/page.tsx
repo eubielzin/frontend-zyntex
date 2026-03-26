@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
+import { fetchCepData } from "@/lib/cep"
 
 export default function EditarLocalPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -18,6 +20,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(false);
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
+  const apiUrl = buildApiUrl("/local");
 
   // Inicializando tudo como string para evitar Uncontrolled Inputs
   const [formData, setFormData] = useState({
@@ -61,7 +64,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/${localId}`);
+        const response = await fetch(`${apiUrl}/${localId}`);
         if (!response.ok) throw new Error("Local não encontrado");
         
         const data = await response.json();
@@ -112,7 +115,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     if (localId) carregarDados();
   }, [localId, router]);
 
-  // Máscaras e ViaCEP
+  // Máscaras e busca de CEP
   const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
 
@@ -120,17 +123,17 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     if (cepLimpo.length !== 8) return;
     try {
       setLoadingCep(true);
-      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
+      const data = await fetchCepData(cepLimpo);
+      if (data) {
         setFormData(prev => ({
           ...prev,
-        
-            logradouro: data.logradouro || prev.logradouro,
-            bairro: data.bairro || prev.bairro,
-            cidade: data.localidade || prev.cidade,
-            estado: data.uf || prev.estado
-          
+          logradouro: data.logradouro || prev.logradouro,
+          tipoLogradouro: data.tipoLogradouro || prev.tipoLogradouro,
+          bairro: data.bairro || prev.bairro,
+          cidade: data.cidade || prev.cidade,
+          estado: data.estado || prev.estado,
+          latitude: data.latitude || prev.latitude,
+          longitude: data.longitude || prev.longitude
         }));
       }
     } catch (err) { console.error(err); } finally { setLoadingCep(false); }
@@ -203,7 +206,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
         }
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/${localId}`, {
+      const response = await fetch(`${apiUrl}/${localId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -367,8 +370,8 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" step="any" value={formData?.latitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" value={formData?.longitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label  className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input disabled name="coordenadaGPS.latitude" type="number" step="any" value={formData?.latitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input disabled name="coordenadaGPS.longitude" type="number" step="any" value={formData?.longitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">

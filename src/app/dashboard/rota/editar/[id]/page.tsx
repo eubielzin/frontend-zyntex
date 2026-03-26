@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, useRef, use } from "react" 
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
 
 const COR_SELECAO = "#cf9d09";
 
@@ -29,6 +30,10 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
   const resolvedParams = use(params);
   const rotaId = resolvedParams.id;
   const router = useRouter();
+  const rotaApiUrl = buildApiUrl("/rota");
+  const promotorSelectApiUrl = buildApiUrl("/promotor/select");
+  const localSelectApiUrl = buildApiUrl("/local/select");
+  const tarefaSelectApiUrl = buildApiUrl("/tarefa/select");
 
   const [activeTab, setActiveTab] = useState("geral");
   const [loadingSalvar, setLoadingSalvar] = useState(false);
@@ -60,10 +65,10 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
       try {
         setLoadingInicial(true);
         const [resPromotores, resLocais, resTarefas, resRotaAtual] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/select`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/local/select`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/tarefa/select`), // Puxando tarefas da API também
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota/${rotaId}`)
+          fetch(promotorSelectApiUrl),
+          fetch(localSelectApiUrl),
+          fetch(tarefaSelectApiUrl),
+          fetch(`${rotaApiUrl}/${rotaId}`)
         ]);
 
         const promotoresAPI = resPromotores.ok ? await resPromotores.json() : [];
@@ -154,7 +159,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         }))
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rota/${rotaId}`, {
+      const response = await fetch(`${rotaApiUrl}/${rotaId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

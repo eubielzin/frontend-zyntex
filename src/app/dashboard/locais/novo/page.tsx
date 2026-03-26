@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
+import { fetchCepData } from "@/lib/cep"
 
 export default function NovoLocalPage() {
   const router = useRouter();
@@ -16,8 +18,7 @@ export default function NovoLocalPage() {
   const [loadingCep, setLoadingCep] = useState(false);
 
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/local` : `${base}/api/local`;
+    return buildApiUrl("/local");
   };
 
   const [formData, setFormData] = useState({
@@ -67,17 +68,21 @@ export default function NovoLocalPage() {
     if (cepLimpo.length !== 8) return;
     try {
       setLoadingCep(true);
-      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
+      const data = await fetchCepData(cepLimpo);
+      if (data) {
         setFormData(prev => ({
           ...prev,
           endereco: {
             ...prev.endereco,
             logradouro: data.logradouro || prev.endereco.logradouro,
+            tipoLogradouro: data.tipoLogradouro || prev.endereco.tipoLogradouro,
             bairro: data.bairro || prev.endereco.bairro,
-            cidade: data.localidade || prev.endereco.cidade,
-            estado: data.uf || prev.endereco.estado
+            cidade: data.cidade || prev.endereco.cidade,
+            estado: data.estado || prev.endereco.estado
+          },
+          coordenadaGPS: {
+            latitude: data.latitude ? Number(data.latitude) : prev.coordenadaGPS.latitude,
+            longitude: data.longitude ? Number(data.longitude) : prev.coordenadaGPS.longitude
           }
         }));
       }
@@ -273,8 +278,8 @@ export default function NovoLocalPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" step="any" value={formData.coordenadaGPS.latitude} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" value={formData.coordenadaGPS.longitude} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] disabled font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" disabled step="any" value={formData.coordenadaGPS.latitude} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                        <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" disabled value={formData.coordenadaGPS.longitude} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">

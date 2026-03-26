@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import { buildApiUrl } from "@/lib/api-url"
+import { fetchCepData } from "@/lib/cep"
 
 // --- INTERFACES ---
 interface Supervisor {
@@ -52,6 +54,8 @@ export default function EditarPromotorPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id;
+  const promotorApiUrl = buildApiUrl("/promotor");
+  const supervisoresApiUrl = buildApiUrl("/usuario/supervisores");
 
   const [activeTab, setActiveTab] = useState("geral");
   const [supervisores, setSupervisores] = useState<Supervisor[]>([]);
@@ -123,8 +127,8 @@ export default function EditarPromotorPage() {
     const fetchData = async () => {
       try {
         const [promotorRes, supRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/${id}`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/supervisores`)
+          fetch(`${promotorApiUrl}/${id}`),
+          fetch(supervisoresApiUrl)
         ]);
 
         if (promotorRes.ok) {
@@ -144,23 +148,22 @@ export default function EditarPromotorPage() {
     if (id) fetchData();
   }, [id]);
 
-  // 2. Lógica ViaCEP para Edição
+  // 2. Lógica de CEP para Edição
   const handleBuscaCEP = async (cepDigitado: string) => {
     const cepLimpo = cepDigitado.replace(/\D/g, "");
     if (cepLimpo.length === 8) {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const data = await response.json();
-        if (!data.erro) {
+        const data = await fetchCepData(cepLimpo);
+        if (data) {
           setFormData(prev => ({
             ...prev,
             endereco: { 
               ...prev.endereco, 
               logradouro: data.logradouro, 
+              tipoLogradouro: data.tipoLogradouro,
               bairro: data.bairro, 
-              cidade: data.localidade, 
-              estado: data.uf.toUpperCase(), 
-              tipoLogradouro: data.logradouro.split(" ")[0] || "" 
+              cidade: data.cidade, 
+              estado: data.estado
             }
           }));
           setErrors(prev => ({ ...prev, cep: "" }));
@@ -180,7 +183,7 @@ export default function EditarPromotorPage() {
         metaMensal: formData.metaMensal.replace(/\./g, ''), 
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/promotor/${id}`, {
+      const response = await fetch(`${promotorApiUrl}/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend)

@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox" // Certifiquei o import do Checkbox
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
+import { fetchCepData } from "@/lib/cep"
 
 const COR_SELECAO = "#cf9d09";
 
@@ -21,6 +23,7 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
   const [loadingSalvar, setLoadingSalvar] = useState(false);
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
+  const apiUrl = buildApiUrl("/industria");
 
   // Adicionado 'ativo' no estado inicial
   const [formData, setFormData] = useState({
@@ -41,7 +44,9 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
       cidade: "",
       estado: "",
       cep: "",
-      referencia: ""
+      referencia: "",
+      latitude: "",
+      longitude: ""
     }
   });
 
@@ -50,7 +55,7 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/industria/${industriaId}`);
+        const response = await fetch(`${apiUrl}/${industriaId}`);
         if (!response.ok) throw new Error("Indústria não encontrada");
         
         const data = await response.json();
@@ -90,17 +95,19 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
     if (cepLimpo.length !== 8) return;
     try {
       setLoadingCep(true);
-      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
+      const data = await fetchCepData(cepLimpo);
+      if (data) {
         setFormData(prev => ({
           ...prev,
           endereco: {
             ...prev.endereco,
             logradouro: data.logradouro || prev.endereco.logradouro,
+            tipoLogradouro: data.tipoLogradouro || prev.endereco.tipoLogradouro,
             bairro: data.bairro || prev.endereco.bairro,
-            cidade: data.localidade || prev.endereco.cidade,
-            estado: data.uf || prev.endereco.estado
+            cidade: data.cidade || prev.endereco.cidade,
+            estado: data.estado || prev.endereco.estado,
+            latitude: data.latitude || prev.endereco.latitude,
+            longitude: data.longitude || prev.endereco.longitude
           }
         }));
       }
@@ -136,7 +143,7 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
         cnpj: formData.cnpj.replace(/\D/g, "")
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/industria/${industriaId}`, {
+      const response = await fetch(`${apiUrl}/${industriaId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
