@@ -2,6 +2,22 @@ import { NextRequest } from "next/server";
 
 const METHODS_WITHOUT_BODY = new Set(["GET", "HEAD"]);
 
+function buildForwardHeaders(request: NextRequest) {
+  const headers = new Headers();
+
+  const allowedHeaders = ["accept", "authorization", "content-type"];
+
+  for (const headerName of allowedHeaders) {
+    const headerValue = request.headers.get(headerName);
+
+    if (headerValue) {
+      headers.set(headerName, headerValue);
+    }
+  }
+
+  return headers;
+}
+
 function getBackendBaseUrl() {
   const baseUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -20,14 +36,9 @@ async function forwardRequest(
   const backendPath = path.join("/");
   const backendUrl = `${getBackendBaseUrl()}/${backendPath}${request.nextUrl.search}`;
 
-  const headers = new Headers(request.headers);
-  headers.delete("host");
-  headers.delete("connection");
-  headers.delete("content-length");
-
   const init: RequestInit = {
     method: request.method,
-    headers,
+    headers: buildForwardHeaders(request),
     cache: "no-store",
     redirect: "manual",
   };
