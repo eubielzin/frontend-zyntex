@@ -53,6 +53,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { buildApiUrl } from "@/lib/api-url"
 
 // Interface baseada no seu ItemDto
 interface Item {
@@ -84,8 +85,7 @@ export default function ListaItensPage() {
 
   // Função para evitar duplicar /api na URL
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/item` : `${base}/api/item`;
+    return buildApiUrl("/item");
   };
 
   // Busca os itens da API com suporte a Paginação

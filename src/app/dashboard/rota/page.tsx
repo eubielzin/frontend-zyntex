@@ -53,6 +53,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Rota {
   id: number;
@@ -75,8 +76,7 @@ export default function RotaPage() {
   const opcoes = ["Exportar dados", "Importar dados"];
 
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/rota` : `${base}/api/rota`;
+    return buildApiUrl("/rota");
   };
 
   const fetchRotas = async (page: number) => {

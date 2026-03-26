@@ -50,6 +50,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Tarefa {
     id: number;
@@ -74,8 +75,7 @@ export default function ListaTarefasPage() {
     const opcoes = ["Exportar dados", "Importar dados"];
 
     const getApiUrl = () => {
-        const base = process.env.NEXT_PUBLIC_API_URL || "";
-        return base.endsWith("/api") ? `${base}/tarefa` : `${base}/api/tarefa`;
+        return buildApiUrl("/tarefa");
     };
 
     const fetchTarefas = async (page: number) => {

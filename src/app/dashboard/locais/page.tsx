@@ -52,6 +52,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Local {
   id: number;
@@ -88,8 +89,7 @@ export default function ListaLocaisPage() {
 
   // Evita duplicar /api/api
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/local` : `${base}/api/local`;
+    return buildApiUrl("/local");
   };
 
   const carregarLocais = async (page: number) => {

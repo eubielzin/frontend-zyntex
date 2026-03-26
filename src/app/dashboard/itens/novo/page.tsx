@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Industria {
   id: number;
@@ -15,6 +16,8 @@ interface Industria {
 
 export default function NovoItemPage() {
   const router = useRouter();
+  const itemApiUrl = buildApiUrl("/item");
+  const industriaSelectApiUrl = buildApiUrl("/industria/select");
   const [loading, setLoading] = useState(false);
   const [industrias, setIndustrias] = useState<Industria[]>([]);
   const [loadingIndustrias, setLoadingIndustrias] = useState(true);
@@ -33,7 +36,7 @@ export default function NovoItemPage() {
     const fetchIndustrias = async () => {
       try {
         setLoadingIndustrias(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/industria/select`);
+        const response = await fetch(industriaSelectApiUrl);
         if (response.ok) {
           const data = await response.json();
           setIndustrias(data);
@@ -78,7 +81,7 @@ export default function NovoItemPage() {
         variacao: formData.variacao ? parseFloat(formData.variacao) : null
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/item`, {
+      const response = await fetch(itemApiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

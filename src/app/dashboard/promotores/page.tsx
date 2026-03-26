@@ -50,6 +50,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Promotor {
   id: number;
@@ -78,8 +79,7 @@ export default function ListaPromotoresPage() {
 
   // Evita duplicar /api
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/promotor` : `${base}/api/promotor`;
+    return buildApiUrl("/promotor");
   };
 
   // --- FUNÇÕES DE API ---

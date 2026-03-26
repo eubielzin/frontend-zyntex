@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { buildApiUrl } from "@/lib/api-url"
 
 const COR_SELECAO = "#cf9d09"
 
@@ -29,13 +30,11 @@ export default function NovaTarefaPage() {
   })
 
   const getTarefaApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || ""
-    return base.endsWith("/api") ? `${base}/tarefa` : `${base}/api/tarefa`
+    return buildApiUrl("/tarefa")
   }
 
   const getIndustriaApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || ""
-    return base.endsWith("/api") ? `${base}/industria` : `${base}/api/industria`
+    return buildApiUrl("/industria")
   }
 
   useEffect(() => {

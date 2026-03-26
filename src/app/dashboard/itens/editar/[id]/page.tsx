@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Industria {
   id: number;
@@ -18,6 +19,8 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
   const resolvedParams = use(params);
   const itemId = resolvedParams.id;
   const router = useRouter();
+  const itemApiUrl = buildApiUrl("/item");
+  const industriaSelectApiUrl = buildApiUrl("/industria/select");
 
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingSalvar, setLoadingSalvar] = useState(false);
@@ -51,8 +54,8 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
         setLoadingInicial(true);
         
         const [itemRes, industriasRes] = await Promise.all([
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/item/${itemId}`),
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/industria/select`)
+            fetch(`${itemApiUrl}/${itemId}`),
+            fetch(industriaSelectApiUrl)
         ]);
 
         if (!itemRes.ok) throw new Error("Item não encontrado");
@@ -127,7 +130,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
         variacao: formData.variacao ? parseFloat(formData.variacao) : null
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/item/${itemId}`, {
+      const response = await fetch(`${itemApiUrl}/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

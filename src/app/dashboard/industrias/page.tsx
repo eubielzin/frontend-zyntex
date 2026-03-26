@@ -51,6 +51,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { buildApiUrl } from "@/lib/api-url"
 
 interface Endereco {
   logradouro?: string;
@@ -87,8 +88,7 @@ export default function ListaIndustriasPage() {
 
   // URL base ajustada para o seu @RequestMapping("/api/industria")
   const getApiUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return base.endsWith("/api") ? `${base}/industria` : `${base}/api/industria`;
+    return buildApiUrl("/industria");
   };
 
   // BUSCA COM PAGINAÇÃO E FILTRO AJUSTADA
