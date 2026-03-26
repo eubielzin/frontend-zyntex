@@ -11,6 +11,42 @@ import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 import { fetchCepData } from "@/lib/cep"
 
+const initialFormData = {
+  descricao: "",
+  ativo: true,
+  razaoSocial: "",
+  numeroTelefoneCelular: "",
+  numeroTelefoneFixo: "",
+  email: "",
+  apelido: "",
+  frequenciaAtendimentoSemanal: "",
+  tempoMedioAtendimento: "",
+  observacao: "",
+  nomeGerente: "",
+  aniversarioGerente: "",
+  numeroCheckouts: "",
+  horarioEntrada: "",
+  horarioSaida: "",
+  rede: "",
+  bandeira: "",
+  regional: "",
+  perfil: "",
+  canal: "",
+  imagemLocalUrl: "",
+  imagemPrateleiraUrl: "",
+  logradouro: "",
+  tipoLogradouro: "",
+  numero: "",
+  complemento: "",
+  bairro: "",
+  cidade: "",
+  estado: "",
+  cep: "",
+  referencia: "",
+  latitude: "",
+  longitude: ""
+};
+
 export default function EditarLocalPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const localId = resolvedParams.id;
@@ -21,42 +57,62 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
   const apiUrl = buildApiUrl("/local");
+  const detalhesApiUrl = buildApiUrl(`/local/detalhes/${localId}`);
 
   // Inicializando tudo como string para evitar Uncontrolled Inputs
-  const [formData, setFormData] = useState({
-    descricao: "",
-    ativo: true,
-    razaoSocial: "",
-    numeroTelefoneCelular: "",
-    numeroTelefoneFixo: "",
-    email: "",
-    apelido: "",
-    frequenciaAtendimentoSemanal: "",
-    tempoMedioAtendimento: "",
-    observacao: "",
-    nomeGerente: "",
-    aniversarioGerente: "", 
-    numeroCheckouts: "",
-    horarioEntrada: "", 
-    horarioSaida: "",
-    rede: "",
-    bandeira: "",
-    regional: "",
-    perfil: "",
-    canal: "",
-    imagemLocalUrl: "",
-    imagemPrateleiraUrl: "",
-    logradouro: "",
-    tipoLogradouro: "",
-    numero: "",
-    complemento: "",
-    bairro: "",
-    cidade: "",
-    estado: "",
-    cep: "",
-    referencia: "",
-    latitude: "",
-    longitude: ""
+  const [formData, setFormData] = useState(initialFormData);
+
+  // Máscaras e busca de CEP
+  const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
+  const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
+  const formatNullableTime = (v?: string | null) => v?.substring(0, 5) || "";
+  const formatNullableDate = (v?: string | null) => v?.substring(0, 10) || "";
+  const getEnderecoField = (data: any, field: string) => data?.[field] ?? data?.endereco?.[field] ?? "";
+  const getCoordenadaField = (data: any, field: "latitude" | "longitude") => data?.[field] ?? data?.coordenadaGPS?.[field] ?? "";
+  const pickValue = (...values: unknown[]) => {
+    for (const value of values) {
+      if (value === null || value === undefined) continue;
+      if (typeof value === "string" && value.trim() === "") continue;
+      return value;
+    }
+
+    return "";
+  };
+  const normalizeLocalData = (data: any) => ({
+    ...data,
+    descricao: data.descricao || data.nome || "",
+    ativo: data.ativo ?? true,
+    razaoSocial: data.razaoSocial || "",
+    apelido: data.apelido || "",
+    email: data.email || "",
+    regional: data.regional || "",
+    nomeGerente: data.nomeGerente || "",
+    numeroTelefoneCelular: data.numeroTelefoneCelular ? formatPhone(data.numeroTelefoneCelular) : "",
+    numeroTelefoneFixo: data.numeroTelefoneFixo ? formatPhone(data.numeroTelefoneFixo) : "",
+    observacao: data.observacao || "",
+    rede: data.rede || "",
+    bandeira: data.bandeira || "",
+    perfil: data.perfil || "",
+    canal: data.canal || "",
+    aniversarioGerente: formatNullableDate(data.aniversarioGerente),
+    frequenciaAtendimentoSemanal: data.frequenciaAtendimentoSemanal?.toString() || "",
+    tempoMedioAtendimento: data.tempoMedioAtendimento?.toString() || "",
+    numeroCheckouts: data.numeroCheckouts?.toString() || "",
+    imagemLocalUrl: data.imagemLocalUrl || "",
+    imagemPrateleiraUrl: data.imagemPrateleiraUrl || "",
+    horarioEntrada: formatNullableTime(data.horarioEntrada),
+    horarioSaida: formatNullableTime(data.horarioSaida),
+    logradouro: getEnderecoField(data, "logradouro"),
+    tipoLogradouro: getEnderecoField(data, "tipoLogradouro"),
+    numero: getEnderecoField(data, "numero"),
+    complemento: getEnderecoField(data, "complemento"),
+    bairro: getEnderecoField(data, "bairro"),
+    cidade: getEnderecoField(data, "cidade"),
+    estado: getEnderecoField(data, "estado"),
+    cep: getEnderecoField(data, "cep") ? formatCEP(String(getEnderecoField(data, "cep"))) : "",
+    referencia: getEnderecoField(data, "referencia"),
+    latitude: getCoordenadaField(data, "latitude")?.toString() || "",
+    longitude: getCoordenadaField(data, "longitude")?.toString() || "",
   });
 
   // 1. Carregar Dados Iniciais
@@ -64,45 +120,49 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const response = await fetch(`${apiUrl}/${localId}`);
-        if (!response.ok) throw new Error("Local não encontrado");
-        
-        const data = await response.json();
-        
+        const [detalhesResponse, localResponse] = await Promise.allSettled([
+          fetch(detalhesApiUrl),
+          fetch(`${apiUrl}/${localId}`),
+        ]);
+
+        const detalhesData =
+          detalhesResponse.status === "fulfilled" && detalhesResponse.value.ok
+            ? await detalhesResponse.value.json()
+            : null;
+
+        const localData =
+          localResponse.status === "fulfilled" && localResponse.value.ok
+            ? await localResponse.value.json()
+            : null;
+
+        if (!detalhesData && !localData) {
+          throw new Error("Local não encontrado");
+        }
+
+        const normalizedLocalData = localData ? normalizeLocalData(localData) : null;
+        const normalizedDetalhesData = detalhesData ? normalizeLocalData(detalhesData) : null;
+
+        const mergedData = Object.fromEntries(
+          Object.keys(initialFormData).map((key) => [
+            key,
+            pickValue(
+              normalizedDetalhesData?.[key as keyof typeof initialFormData],
+              normalizedLocalData?.[key as keyof typeof initialFormData],
+              initialFormData[key as keyof typeof initialFormData]
+            ),
+          ])
+        ) as typeof initialFormData;
+
         setFormData({
-          ...data,
-          descricao: data.descricao || "",
-          razaoSocial: data.razaoSocial || "",
-          apelido: data.apelido || "",
-          email: data.email || "",
-          regional: data.regional || "",
-          nomeGerente: data.nomeGerente || "",
-          numeroTelefoneCelular: data.numeroTelefoneCelular || "",
-          numeroTelefoneFixo: data.numeroTelefoneFixo || "",
-          observacao: data.observacao || "",
-          rede: data.rede || "",
-          bandeira: data.bandeira || "",
-          perfil: data.perfil || "",
-          canal: data.canal || "",
-          aniversarioGerente: data.aniversarioGerente || "",
-          frequenciaAtendimentoSemanal: data.frequenciaAtendimentoSemanal?.toString() || "",
-          tempoMedioAtendimento: data.tempoMedioAtendimento?.toString() || "",
-          numeroCheckouts: data.numeroCheckouts?.toString() || "",
-          imagemLocalUrl: data.imagemLocalUrl || "",
-          imagemPrateleiraUrl: data.imagemPrateleiraUrl || "",
-          horarioEntrada: data.horarioEntrada?.substring(0, 5) || "",
-          horarioSaida: data.horarioSaida?.substring(0, 5) || "",
-          logradouro: data?.logradouro || "",
-          tipoLogradouro: data?.tipoLogradouro || "",
-          numero: data?.numero || "",
-          complemento: data?.complemento || "",
-          bairro: data?.bairro || "",
-          cidade: data?.cidade || "",
-          estado: data?.estado || "",
-          cep: data?.cep || "",
-          referencia: data?.referencia || "",
-          latitude: data?.latitude?.toString() || "",
-          longitude: data?.longitude?.toString() || "",
+          ...initialFormData,
+          ...mergedData,
+          ativo: Boolean(
+            pickValue(
+              normalizedDetalhesData?.ativo,
+              normalizedLocalData?.ativo,
+              initialFormData.ativo
+            )
+          ),
         });
       } catch (error) {
         console.error("Erro busca:", error);
@@ -112,12 +172,9 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
         setLoadingInicial(false);
       }
     };
-    if (localId) carregarDados();
-  }, [localId, router]);
 
-  // Máscaras e busca de CEP
-  const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
-  const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
+    if (localId) carregarDados();
+  }, [apiUrl, detalhesApiUrl, localId, router]);
 
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;
@@ -188,7 +245,18 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
         aniversarioGerente: formData.aniversarioGerente || null,
         horarioEntrada: formData.horarioEntrada ? (formData.horarioEntrada.length === 5 ? `${formData.horarioEntrada}:00` : formData.horarioEntrada) : null,
         horarioSaida: formData.horarioSaida ? (formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida) : null,
-        
+
+        logradouro: formData.logradouro,
+        tipoLogradouro: formData.tipoLogradouro,
+        numero: formData.numero,
+        complemento: formData.complemento,
+        bairro: formData.bairro,
+        cidade: formData.cidade,
+        estado: formData.estado || null,
+        cep: formData.cep,
+        referencia: formData.referencia,
+        latitude: formData.latitude ? parseFloat(String(formData.latitude)) : null,
+        longitude: formData.longitude ? parseFloat(String(formData.longitude)) : null,
         endereco: {
           logradouro: formData.logradouro,
           tipoLogradouro: formData.tipoLogradouro,
@@ -196,13 +264,13 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
           complemento: formData.complemento,
           bairro: formData.bairro,
           cidade: formData.cidade,
-          estado: formData.estado,
+          estado: formData.estado || null,
           cep: formData.cep,
-          referencia: formData.referencia
+          referencia: formData.referencia,
         },
         coordenadaGPS: {
           latitude: formData.latitude ? parseFloat(String(formData.latitude)) : null,
-          longitude: formData.longitude ? parseFloat(String(formData.longitude)) : null
+          longitude: formData.longitude ? parseFloat(String(formData.longitude)) : null,
         }
       };
 

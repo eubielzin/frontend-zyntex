@@ -63,6 +63,25 @@ export default function NovoLocalPage() {
 
   const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
+  const isValidDateInput = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(`${value}T00:00:00`);
+
+    return (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === year &&
+      date.getMonth() + 1 === month &&
+      date.getDate() === day
+    );
+  };
+  const toNullableNumber = (value: string | number) => {
+    if (value === "" || value === null || value === undefined) return null;
+
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+  };
 
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;
@@ -126,16 +145,54 @@ export default function NovoLocalPage() {
     try {
       setLoading(true);
       const payload = {
-        ...formData,
-        frequenciaAtendimentoSemanal: Number(formData.frequenciaAtendimentoSemanal),
-        tempoMedioAtendimento: Number(formData.tempoMedioAtendimento),
-        numeroCheckouts: Number(formData.numeroCheckouts),
-        coordenadaGPS: {
-          latitude: Number(formData.coordenadaGPS.latitude),
-          longitude: Number(formData.coordenadaGPS.longitude)
-        },
+        ativo: formData.ativo,
+        descricao: formData.descricao,
+        razaoSocial: formData.razaoSocial,
+        numeroTelefoneCelular: formData.numeroTelefoneCelular,
+        numeroTelefoneFixo: formData.numeroTelefoneFixo,
+        email: formData.email,
+        apelido: formData.apelido,
+        observacao: formData.observacao,
+        nomeGerente: formData.nomeGerente,
+        rede: formData.rede,
+        bandeira: formData.bandeira,
+        regional: formData.regional,
+        perfil: formData.perfil,
+        canal: formData.canal,
+        imagemLocalUrl: formData.imagemLocalUrl,
+        imagemPrateleiraUrl: formData.imagemPrateleiraUrl,
+        frequenciaAtendimentoSemanal: toNullableNumber(formData.frequenciaAtendimentoSemanal),
+        tempoMedioAtendimento: toNullableNumber(formData.tempoMedioAtendimento),
+        numeroCheckouts: toNullableNumber(formData.numeroCheckouts),
+        aniversarioGerente: isValidDateInput(formData.aniversarioGerente) ? formData.aniversarioGerente : null,
         horarioEntrada: formData.horarioEntrada.length === 5 ? `${formData.horarioEntrada}:00` : formData.horarioEntrada,
-        horarioSaida: formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida
+        horarioSaida: formData.horarioSaida.length === 5 ? `${formData.horarioSaida}:00` : formData.horarioSaida,
+        logradouro: formData.endereco.logradouro,
+        tipoLogradouro: formData.endereco.tipoLogradouro,
+        numero: formData.endereco.numero,
+        complemento: formData.endereco.complemento,
+        bairro: formData.endereco.bairro,
+        cidade: formData.endereco.cidade,
+        estado: formData.endereco.estado || null,
+        cep: formData.endereco.cep,
+        referencia: formData.endereco.referencia,
+        latitude: toNullableNumber(formData.coordenadaGPS.latitude),
+        longitude: toNullableNumber(formData.coordenadaGPS.longitude),
+        endereco: {
+          logradouro: formData.endereco.logradouro,
+          tipoLogradouro: formData.endereco.tipoLogradouro,
+          numero: formData.endereco.numero,
+          complemento: formData.endereco.complemento,
+          bairro: formData.endereco.bairro,
+          cidade: formData.endereco.cidade,
+          estado: formData.endereco.estado || null,
+          cep: formData.endereco.cep,
+          referencia: formData.endereco.referencia,
+        },
+        coordenadaGPS: {
+          latitude: toNullableNumber(formData.coordenadaGPS.latitude),
+          longitude: toNullableNumber(formData.coordenadaGPS.longitude),
+        }
       };
 
       const response = await fetch(getApiUrl(), {
@@ -143,10 +200,35 @@ export default function NovoLocalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      
-      if (response.ok) router.push("/dashboard/locais");
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        let errorMessage = responseText;
+
+        try {
+          const responseJson = JSON.parse(responseText);
+          errorMessage =
+            responseJson.message ||
+            responseJson.error ||
+            responseJson.details ||
+            responseText;
+        } catch {
+          // Mantem o texto puro quando a resposta nao for JSON.
+        }
+
+        console.error("Erro ao salvar local:", {
+          status: response.status,
+          payload,
+          response: responseText
+        });
+
+        throw new Error(errorMessage || `Erro ${response.status} ao salvar local.`);
+      }
+
+      router.push("/dashboard/locais");
     } catch (error) {
       console.error("Erro ao salvar:", error);
+      alert(error instanceof Error ? error.message : "Nao foi possivel salvar o local.");
     } finally {
       setLoading(false);
     }

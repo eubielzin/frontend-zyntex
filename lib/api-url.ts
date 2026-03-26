@@ -1,4 +1,12 @@
 export function buildApiUrl(path = "") {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `/api/proxy${normalizedPath}`;
+
+  if (!baseUrl) {
+    return normalizedPath;
+  }
+
+  const normalizedBaseUrl = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+
+  return `${normalizedBaseUrl}${normalizedPath}`;
 }
