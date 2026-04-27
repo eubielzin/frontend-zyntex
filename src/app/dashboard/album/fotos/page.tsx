@@ -374,9 +374,6 @@ export default function AlbumFotosPage() {
                         <Badge className="mt-1 rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
                           ID {foto.id}
                         </Badge>
-                        <p className="mt-2 truncate text-xs text-gray-500">
-                          {empresa}
-                        </p>
                       </div>
                     </label>
                   )
