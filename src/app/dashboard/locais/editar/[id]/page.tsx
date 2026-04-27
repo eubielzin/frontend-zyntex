@@ -57,7 +57,8 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
   const apiUrl = buildApiUrl("/local");
-  const detalhesApiUrl = buildApiUrl(`/local/detalhes/${localId}`);
+  const detalhesApiUrlPrincipal = buildApiUrl(`/local/detalhes/${localId}`);
+  const detalhesApiUrlAlternativo = buildApiUrl(`/local/${localId}/detalhes`);
 
   // Inicializando tudo como string para evitar Uncontrolled Inputs
   const [formData, setFormData] = useState(initialFormData);
@@ -67,8 +68,31 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
   const formatNullableTime = (v?: string | null) => v?.substring(0, 5) || "";
   const formatNullableDate = (v?: string | null) => v?.substring(0, 10) || "";
-  const getEnderecoField = (data: any, field: string) => data?.[field] ?? data?.endereco?.[field] ?? "";
-  const getCoordenadaField = (data: any, field: "latitude" | "longitude") => data?.[field] ?? data?.coordenadaGPS?.[field] ?? "";
+  const unwrapPayload = (data: any) => {
+    if (!data || typeof data !== "object") return data;
+    if (data.data && typeof data.data === "object") return data.data;
+    if (data.content && !Array.isArray(data.content) && typeof data.content === "object") return data.content;
+    return data;
+  };
+  const getFirstValue = (data: any, paths: string[][]) => {
+    for (const path of paths) {
+      let current = data;
+
+      for (const segment of path) {
+        current = current?.[segment];
+      }
+
+      if (current !== null && current !== undefined && current !== "") {
+        return current;
+      }
+    }
+
+    return "";
+  };
+  const getEnderecoField = (data: any, field: string) =>
+    getFirstValue(data, [[field], ["endereco", field], ["detalhes", field], ["detalhes", "endereco", field]]);
+  const getCoordenadaField = (data: any, field: "latitude" | "longitude") =>
+    getFirstValue(data, [[field], ["coordenadaGPS", field], ["detalhes", field], ["detalhes", "coordenadaGPS", field]]);
   const pickValue = (...values: unknown[]) => {
     for (const value of values) {
       if (value === null || value === undefined) continue;
@@ -78,30 +102,40 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
 
     return "";
   };
+  const countFilledFields = (data: typeof initialFormData) =>
+    Object.entries(data).reduce((total, [key, value]) => {
+      if (key === "ativo") return total + (value ? 1 : 0);
+      if (typeof value === "string" && value.trim() !== "") return total + 1;
+      return total;
+    }, 0);
   const normalizeLocalData = (data: any) => ({
     ...data,
-    descricao: data.descricao || data.nome || "",
-    ativo: data.ativo ?? true,
-    razaoSocial: data.razaoSocial || "",
-    apelido: data.apelido || "",
-    email: data.email || "",
-    regional: data.regional || "",
-    nomeGerente: data.nomeGerente || "",
-    numeroTelefoneCelular: data.numeroTelefoneCelular ? formatPhone(data.numeroTelefoneCelular) : "",
-    numeroTelefoneFixo: data.numeroTelefoneFixo ? formatPhone(data.numeroTelefoneFixo) : "",
-    observacao: data.observacao || "",
-    rede: data.rede || "",
-    bandeira: data.bandeira || "",
-    perfil: data.perfil || "",
-    canal: data.canal || "",
-    aniversarioGerente: formatNullableDate(data.aniversarioGerente),
-    frequenciaAtendimentoSemanal: data.frequenciaAtendimentoSemanal?.toString() || "",
-    tempoMedioAtendimento: data.tempoMedioAtendimento?.toString() || "",
-    numeroCheckouts: data.numeroCheckouts?.toString() || "",
-    imagemLocalUrl: data.imagemLocalUrl || "",
-    imagemPrateleiraUrl: data.imagemPrateleiraUrl || "",
-    horarioEntrada: formatNullableTime(data.horarioEntrada),
-    horarioSaida: formatNullableTime(data.horarioSaida),
+    descricao: getFirstValue(data, [["descricao"], ["nome"], ["detalhes", "descricao"], ["detalhes", "nome"]]) || "",
+    ativo: getFirstValue(data, [["ativo"], ["detalhes", "ativo"]]) !== "" ? Boolean(getFirstValue(data, [["ativo"], ["detalhes", "ativo"]])) : true,
+    razaoSocial: getFirstValue(data, [["razaoSocial"], ["detalhes", "razaoSocial"]]) || "",
+    apelido: getFirstValue(data, [["apelido"], ["nomeFantasia"], ["detalhes", "apelido"], ["detalhes", "nomeFantasia"]]) || "",
+    email: getFirstValue(data, [["email"], ["detalhes", "email"]]) || "",
+    regional: getFirstValue(data, [["regional"], ["detalhes", "regional"]]) || "",
+    nomeGerente: getFirstValue(data, [["nomeGerente"], ["detalhes", "nomeGerente"]]) || "",
+    numeroTelefoneCelular: getFirstValue(data, [["numeroTelefoneCelular"], ["telefoneCelular"], ["detalhes", "numeroTelefoneCelular"], ["detalhes", "telefoneCelular"]])
+      ? formatPhone(String(getFirstValue(data, [["numeroTelefoneCelular"], ["telefoneCelular"], ["detalhes", "numeroTelefoneCelular"], ["detalhes", "telefoneCelular"]])))
+      : "",
+    numeroTelefoneFixo: getFirstValue(data, [["numeroTelefoneFixo"], ["telefoneFixo"], ["detalhes", "numeroTelefoneFixo"], ["detalhes", "telefoneFixo"]])
+      ? formatPhone(String(getFirstValue(data, [["numeroTelefoneFixo"], ["telefoneFixo"], ["detalhes", "numeroTelefoneFixo"], ["detalhes", "telefoneFixo"]])))
+      : "",
+    observacao: getFirstValue(data, [["observacao"], ["detalhes", "observacao"]]) || "",
+    rede: getFirstValue(data, [["rede"], ["detalhes", "rede"]]) || "",
+    bandeira: getFirstValue(data, [["bandeira"], ["detalhes", "bandeira"]]) || "",
+    perfil: getFirstValue(data, [["perfil"], ["detalhes", "perfil"]]) || "",
+    canal: getFirstValue(data, [["canal"], ["detalhes", "canal"]]) || "",
+    aniversarioGerente: formatNullableDate(getFirstValue(data, [["aniversarioGerente"], ["detalhes", "aniversarioGerente"]]) as string | null | undefined),
+    frequenciaAtendimentoSemanal: getFirstValue(data, [["frequenciaAtendimentoSemanal"], ["detalhes", "frequenciaAtendimentoSemanal"]])?.toString() || "",
+    tempoMedioAtendimento: getFirstValue(data, [["tempoMedioAtendimento"], ["detalhes", "tempoMedioAtendimento"]])?.toString() || "",
+    numeroCheckouts: getFirstValue(data, [["numeroCheckouts"], ["detalhes", "numeroCheckouts"]])?.toString() || "",
+    imagemLocalUrl: getFirstValue(data, [["imagemLocalUrl"], ["detalhes", "imagemLocalUrl"]]) || "",
+    imagemPrateleiraUrl: getFirstValue(data, [["imagemPrateleiraUrl"], ["detalhes", "imagemPrateleiraUrl"]]) || "",
+    horarioEntrada: formatNullableTime(getFirstValue(data, [["horarioEntrada"], ["detalhes", "horarioEntrada"]]) as string | null | undefined),
+    horarioSaida: formatNullableTime(getFirstValue(data, [["horarioSaida"], ["detalhes", "horarioSaida"]]) as string | null | undefined),
     logradouro: getEnderecoField(data, "logradouro"),
     tipoLogradouro: getEnderecoField(data, "tipoLogradouro"),
     numero: getEnderecoField(data, "numero"),
@@ -120,27 +154,39 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const [detalhesResponse, localResponse] = await Promise.allSettled([
-          fetch(detalhesApiUrl),
+        const [detalhesPrincipalResponse, detalhesAlternativoResponse, localResponse] = await Promise.allSettled([
+          fetch(detalhesApiUrlPrincipal),
+          fetch(detalhesApiUrlAlternativo),
           fetch(`${apiUrl}/${localId}`),
         ]);
 
-        const detalhesData =
-          detalhesResponse.status === "fulfilled" && detalhesResponse.value.ok
-            ? await detalhesResponse.value.json()
-            : null;
+        const detalhesResponses = [detalhesPrincipalResponse, detalhesAlternativoResponse];
+        const detalhesCandidates = await Promise.all(
+          detalhesResponses.map(async (response) => {
+            if (response.status !== "fulfilled" || !response.value.ok) {
+              return null;
+            }
+
+            const json = await response.value.json();
+            return unwrapPayload(json);
+          })
+        );
 
         const localData =
           localResponse.status === "fulfilled" && localResponse.value.ok
-            ? await localResponse.value.json()
+            ? unwrapPayload(await localResponse.value.json())
             : null;
 
-        if (!detalhesData && !localData) {
+        const normalizedDetalhesData = detalhesCandidates
+          .filter(Boolean)
+          .map((data) => normalizeLocalData(data))
+          .sort((a, b) => countFilledFields(b) - countFilledFields(a))[0] ?? null;
+
+        if (!normalizedDetalhesData && !localData) {
           throw new Error("Local não encontrado");
         }
 
         const normalizedLocalData = localData ? normalizeLocalData(localData) : null;
-        const normalizedDetalhesData = detalhesData ? normalizeLocalData(detalhesData) : null;
 
         const mergedData = Object.fromEntries(
           Object.keys(initialFormData).map((key) => [
@@ -174,7 +220,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     };
 
     if (localId) carregarDados();
-  }, [apiUrl, detalhesApiUrl, localId, router]);
+  }, [apiUrl, detalhesApiUrlAlternativo, detalhesApiUrlPrincipal, localId, router]);
 
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;

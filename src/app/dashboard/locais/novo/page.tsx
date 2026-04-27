@@ -1,12 +1,11 @@
 "use client"
-import { Pencil, ChevronLeft, Loader2, Info } from "lucide-react"
+import { Pencil, ChevronLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 import { fetchCepData } from "@/lib/cep"
@@ -293,6 +292,7 @@ export default function NovoLocalPage() {
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Telefone Celular</Label><Input name="numeroTelefoneCelular" value={formData.numeroTelefoneCelular} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="(00) 00000-0000" /></div>
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Telefone Fixo</Label><Input name="numeroTelefoneFixo" value={formData.numeroTelefoneFixo} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="(00) 0000-0000" /></div>
                     </div>
+
                 </div>
 
                 <div className="flex justify-end mt-12 pt-6 border-t border-gray-100">

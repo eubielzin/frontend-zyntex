@@ -63,8 +63,11 @@ interface Promotor {
   ultimo_envio: string;
 }
 
+const AUTO_REFRESH_MS = 30000;
+
 export default function ListaPromotoresPage() {
   const [promotores, setPromotores] = React.useState<Promotor[]>([]);
+  const [promotoresSelecionados, setPromotoresSelecionados] = React.useState<number[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [exporting, setExporting] = React.useState(false);
   const [termoBusca, setTermoBusca] = React.useState("");
@@ -82,14 +85,19 @@ export default function ListaPromotoresPage() {
     return buildApiUrl("/promotor");
   };
 
-  // --- FUNÇÕES DE API ---
+  
 
-  const fetchPromotores = async (nome?: string, page: number = 0) => {
+  const fetchPromotores = async (
+    nome?: string,
+    page: number = 0,
+    showLoading: boolean = true
+  ) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       
       if (nome) {
-        // Chamada para o endpoint de busca (Retorna List<PromotorFiltroBusca>)
         const url = `${getApiUrl()}/buscar?nome=${encodeURIComponent(nome)}`;
         const response = await fetch(url);
         
@@ -98,11 +106,11 @@ export default function ListaPromotoresPage() {
         const data = await response.json();
         
         setPromotores(Array.isArray(data) ? data : []);
-        setTotalPages(1); // Esconde a paginação pois veio a lista completa
+        setTotalPages(1); 
         setCurrentPage(0);
         setTotalElements(Array.isArray(data) ? data.length : 0);
       } else {
-        // Chamada para o endpoint paginado padrão
+        
         const url = `${getApiUrl()}/paged?page=${page}&size=10`;
         const response = await fetch(url);
         
@@ -119,9 +127,13 @@ export default function ListaPromotoresPage() {
 
     } catch (error) {
       console.error("Erro na requisição:", error);
-      setPromotores([]);
+      if (showLoading) {
+        setPromotores([]);
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -183,6 +195,54 @@ export default function ListaPromotoresPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [termoBusca, currentPage]);
+
+  React.useEffect(() => {
+    const refreshPromotores = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      fetchPromotores(termoBusca, currentPage, false);
+    };
+
+    const intervalId = window.setInterval(refreshPromotores, AUTO_REFRESH_MS);
+    document.addEventListener("visibilitychange", refreshPromotores);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", refreshPromotores);
+    };
+  }, [currentPage, termoBusca]);
+
+  React.useEffect(() => {
+    const idsVisiveis = new Set(promotores.map((promotor) => promotor.id));
+    setPromotoresSelecionados((prev) => prev.filter((id) => idsVisiveis.has(id)));
+  }, [promotores]);
+
+  const todosPromotoresVisiveisSelecionados =
+    promotores.length > 0 && promotores.every((promotor) => promotoresSelecionados.includes(promotor.id));
+
+  const algumPromotorSelecionado =
+    promotoresSelecionados.length > 0 && !todosPromotoresVisiveisSelecionados;
+
+  const handleSelecionarTodos = (checked: boolean | "indeterminate") => {
+    if (checked) {
+      setPromotoresSelecionados(promotores.map((promotor) => promotor.id));
+      return;
+    }
+
+    setPromotoresSelecionados([]);
+  };
+
+  const handleSelecionarPromotor = (promotorId: number, checked: boolean | "indeterminate") => {
+    setPromotoresSelecionados((prev) => {
+      if (checked) {
+        return prev.includes(promotorId) ? prev : [...prev, promotorId];
+      }
+
+      return prev.filter((id) => id !== promotorId);
+    });
+  };
 
   // Função para renderizar os botões de paginação dinamicamente
   const renderPaginationItems = () => {
@@ -287,7 +347,14 @@ export default function ListaPromotoresPage() {
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead className="w-[50px]"><Checkbox className="border-gray-300" /></TableHead>
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={todosPromotoresVisiveisSelecionados ? true : algumPromotorSelecionado ? "indeterminate" : false}
+                    onCheckedChange={handleSelecionarTodos}
+                    aria-label="Selecionar todos os promotores visíveis"
+                    className="border-gray-300"
+                  />
+                </TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Nome</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Cidade</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Login</TableHead>
@@ -316,7 +383,14 @@ export default function ListaPromotoresPage() {
                 </TableRow>
               ) : promotores.map((promotor) => (
                 <TableRow key={promotor.id} className="hover:bg-gray-50/50">
-                  <TableCell><Checkbox className="border-gray-300" /></TableCell>
+                  <TableCell>
+                    <Checkbox
+                      checked={promotoresSelecionados.includes(promotor.id)}
+                      onCheckedChange={(checked) => handleSelecionarPromotor(promotor.id, checked)}
+                      aria-label={`Selecionar promotor ${promotor.nome}`}
+                      className="border-gray-300"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium text-gray-700">{promotor.nome}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{promotor.cidade || "-"}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{promotor.username}</TableCell>

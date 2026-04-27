@@ -1,12 +1,12 @@
 "use client"
-import { Pencil, ChevronLeft, ArrowRight, Check, Plus, Search, Loader2, ChevronDown, X, Info } from "lucide-react"
+import { Pencil, ChevronLeft, ArrowRight, Plus, Search, Loader2, X, Info } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useState, useEffect, useRef, use } from "react" 
+import { useState, useEffect, use } from "react" 
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 
@@ -31,25 +31,26 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
   const rotaId = resolvedParams.id;
   const router = useRouter();
   const rotaApiUrl = buildApiUrl("/rota");
+  const rotaLocalTarefaApiUrl = buildApiUrl("/rota-local-tarefa");
   const promotorSelectApiUrl = buildApiUrl("/promotor/select");
   const localSelectApiUrl = buildApiUrl("/local/select");
-  const tarefaSelectApiUrl = buildApiUrl("/tarefa/select");
+  const tarefaApiUrl = buildApiUrl("/tarefa");
 
   const [activeTab, setActiveTab] = useState("geral");
   const [loadingSalvar, setLoadingSalvar] = useState(false);
   const [loadingInicial, setLoadingInicial] = useState(true);
-  
-  const [isTarefaOpen, setIsTarefaOpen] = useState(false);
-  const dropdownTarefaRef = useRef<HTMLDivElement>(null);
+  const [loadingTarefas, setLoadingTarefas] = useState(false);
 
-  const [tarefasDisponiveis, setTarefasDisponiveis] = useState<Tarefa[]>([]);
   const [promotoresDisponiveis, setPromotoresDisponiveis] = useState<Promotor[]>([]);
   const [promotoresSelecionados, setPromotoresSelecionados] = useState<Promotor[]>([]);
   const [locaisDisponiveis, setLocaisDisponiveis] = useState<Local[]>([]);
   const [locaisSelecionados, setLocaisSelecionados] = useState<Local[]>([]);
+  const [tarefasDisponiveis, setTarefasDisponiveis] = useState<Tarefa[]>([]);
 
   const [buscaPessoa, setBuscaPessoa] = useState("");
+  const [buscaTarefa, setBuscaTarefa] = useState("");
   const [buscaLocal, setBuscaLocal] = useState("");
+  const [tarefasSelecionadasIds, setTarefasSelecionadasIds] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     descricao: "",
@@ -57,23 +58,47 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
     idIntegracao: "",
     ordemExibicao: 1,
     diasExecucao: [] as string[],
-    tarefaId: null as number | null, 
+    tarefaId: "" as string | number,
   });
 
   useEffect(() => {
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const [resPromotores, resLocais, resTarefas, resRotaAtual] = await Promise.all([
+        setLoadingTarefas(true);
+        const [resPromotores, resLocais, resRotaAtual] = await Promise.all([
           fetch(promotorSelectApiUrl),
           fetch(localSelectApiUrl),
-          fetch(tarefaSelectApiUrl),
           fetch(`${rotaApiUrl}/${rotaId}`)
         ]);
 
         const promotoresAPI = resPromotores.ok ? await resPromotores.json() : [];
         const locaisAPI = resLocais.ok ? await resLocais.json() : [];
-        const tarefasAPI = resTarefas.ok ? await resTarefas.json() : [];
+
+        let page = 0;
+        let totalPages = 1;
+        const tarefasMap = new Map<number, Tarefa>();
+
+        while (page < totalPages) {
+          const response = await fetch(`${tarefaApiUrl}/paged?page=${page}&size=100`);
+
+          if (!response.ok) {
+            throw new Error("Nao foi possivel carregar as tarefas.");
+          }
+
+          const data = await response.json();
+          const tarefasPagina = Array.isArray(data.content) ? data.content : [];
+
+          tarefasPagina.forEach((tarefa: Tarefa) => {
+            tarefasMap.set(tarefa.id, tarefa);
+          });
+
+          totalPages = data.totalPages || 1;
+          page += 1;
+        }
+
+        const tarefasCarregadas = Array.from(tarefasMap.values());
+        setTarefasDisponiveis(tarefasCarregadas);
         
         if (!resRotaAtual.ok) throw new Error("Rota não encontrada");
         const rotaDados = await resRotaAtual.json();
@@ -84,10 +109,8 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
             idIntegracao: rotaDados.idIntegracao || "",
             ordemExibicao: rotaDados.ordemExibicao || 1,
             diasExecucao: rotaDados.diasExecucao || [],
-            tarefaId: rotaDados.tarefaId || null,
+            tarefaId: rotaDados.tarefaId || "",
         });
-
-        setTarefasDisponiveis(tarefasAPI);
 
         // Mapeamento Promotores Corrigido
         const selecionadosP = Array.isArray(rotaDados.promotores) 
@@ -122,24 +145,80 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         const lIds = selecionadosL.map((l: any) => l.id);
         setLocaisDisponiveis(locaisAPI.filter((l: any) => !lIds.includes(l.id)));
 
+        const tarefasExtraidas = [
+          ...(Array.isArray(rotaDados?.tarefasIds) ? rotaDados.tarefasIds : []),
+          ...(Array.isArray(rotaDados?.tarefas) ? rotaDados.tarefas.map((t: any) => t?.id ?? t?.tarefaId).filter((id: any) => Number.isFinite(Number(id))).map(Number) : []),
+          ...(Array.isArray(rotaDados?.locais)
+            ? rotaDados.locais.flatMap((local: any) =>
+                Array.isArray(local?.tarefas)
+                  ? local.tarefas.map((t: any) => t?.id ?? t?.tarefaId)
+                  : Array.isArray(local?.tarefasIds)
+                    ? local.tarefasIds
+                    : []
+              ).filter((id: any) => Number.isFinite(Number(id))).map(Number)
+            : []),
+        ];
+
+        setTarefasSelecionadasIds(
+          Array.from(new Set(tarefasExtraidas)).filter((id) => tarefasCarregadas.some((tarefa) => tarefa.id === id))
+        );
+
+        if (!rotaDados.tarefaId && tarefasExtraidas.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            tarefaId: tarefasExtraidas[0],
+          }));
+        }
+
       } catch (error) { 
         console.error("Erro carregamento:", error);
         router.push("/dashboard/rota");
       } finally { 
+        setLoadingTarefas(false);
         setLoadingInicial(false);
       }
     };
     if (rotaId) carregarDados();
-  }, [rotaId, router]);
+  }, [localSelectApiUrl, promotorSelectApiUrl, rotaApiUrl, rotaId, router, tarefaApiUrl]);
+
+  const tarefasSelecionadas = tarefasDisponiveis.filter((tarefa) => tarefasSelecionadasIds.includes(tarefa.id));
+  const tarefasDisponiveisNaoSelecionadas = tarefasDisponiveis.filter(
+    (tarefa) => !tarefasSelecionadasIds.includes(tarefa.id)
+  );
+  const tarefasFiltradas = tarefasDisponiveisNaoSelecionadas.filter((tarefa) =>
+    tarefa.nome.toLowerCase().includes(buscaTarefa.toLowerCase())
+  );
+
+  const adicionarTarefa = (tarefaId: number) => {
+    setTarefasSelecionadasIds((prev) => [...prev, tarefaId]);
+    setFormData((prev) => ({
+      ...prev,
+      tarefaId: prev.tarefaId || tarefaId,
+    }));
+  };
+
+  const removerTarefa = (tarefaId: number) => {
+    const proximasTarefas = tarefasSelecionadasIds.filter((id) => id !== tarefaId);
+
+    setTarefasSelecionadasIds(proximasTarefas);
+    setFormData((prev) => ({
+      ...prev,
+      tarefaId:
+        Number(prev.tarefaId) === tarefaId
+          ? (proximasTarefas[0] ?? "")
+          : prev.tarefaId,
+    }));
+  };
 
   const handleAtualizarRota = async () => {
-    if (!formData.tarefaId) return alert("Selecione uma tarefa");
+    if (!formData.tarefaId) {
+      alert("Selecione a tarefa principal da rota.");
+      return;
+    }
 
     try {
       setLoadingSalvar(true);
-      
-      const nomeTarefaSelecionada = tarefasDisponiveis.find(t => t.id === formData.tarefaId)?.nome || "";
-      
+
       const payload = {
         id: Number(rotaId),
         descricao: formData.descricao,
@@ -147,15 +226,15 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         idIntegracao: formData.idIntegracao,
         ordemExibicao: formData.ordemExibicao,
         diasExecucao: formData.diasExecucao,
-        tarefaId: formData.tarefaId, 
-        nomeTarefa: nomeTarefaSelecionada,
+        tarefaId: Number(formData.tarefaId),
         locais: locaisSelecionados.map(l => ({
           localId: l.id,
           ativo: true
         })),
         promotores: promotoresSelecionados.map(p => ({
           promotorId: p.id,
-          nome: p.nome
+          ativo: true,
+          dataVinculo: new Date().toISOString().split("T")[0]
         }))
       };
 
@@ -166,6 +245,29 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
       });
 
       if (response.ok) {
+        if (tarefasSelecionadasIds.length > 0 && locaisSelecionados.length > 0) {
+          const vinculosResponses = await Promise.all(
+            locaisSelecionados.map((local) =>
+              fetch(`${rotaLocalTarefaApiUrl}/com-tarefas`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  rotaId: Number(rotaId),
+                  localId: local.id,
+                  tarefasIds: tarefasSelecionadasIds,
+                }),
+              })
+            )
+          );
+
+          const failedResponse = vinculosResponses.find((item) => !item.ok);
+
+          if (failedResponse) {
+            const errorText = await failedResponse.text();
+            throw new Error(errorText || "Erro ao vincular tarefas aos locais da rota.");
+          }
+        }
+
         router.push("/dashboard/rota");
         router.refresh();
       } else {
@@ -216,6 +318,12 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
             Pessoas
           </TabsTrigger>
           <TabsTrigger 
+            value="tarefas" 
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
+          >
+            Tarefas
+          </TabsTrigger>
+          <TabsTrigger 
             value="locais" 
             className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
           >
@@ -257,47 +365,24 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
               
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Tarefa *</Label>
-                <div className="md:col-span-10 relative" ref={dropdownTarefaRef}>
-                  <div 
-                    onClick={() => setIsTarefaOpen(!isTarefaOpen)} 
-                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
-                      formData.tarefaId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
-                    }`}
-                  >
-                    <span className={`text-sm font-montserrat ${formData.tarefaId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
-                      {formData.tarefaId 
-                        ? tarefasDisponiveis.find(t => t.id === Number(formData.tarefaId))?.nome
-                        : "Selecione a tarefa"}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTarefaOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                  
-                  {isTarefaOpen && (
-                    <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
-                      {tarefasDisponiveis.map(tarefa => {
-                        const isSelected = formData.tarefaId === tarefa.id;
-                        return (
-                          <div 
-                            key={tarefa.id} 
-                            onClick={() => {setFormData({...formData, tarefaId: tarefa.id}); setIsTarefaOpen(false)}} 
-                            className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
-                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            <span>{tarefa.nome}</span>
-                            {isSelected && <Check className="h-4 w-4 text-white" />}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="text-gray-600 text-sm">Tarefa Principal *</Label>
+                  <div className="relative">
+                    <select
+                      value={formData.tarefaId}
+                      onChange={(e) => setFormData({ ...formData, tarefaId: e.target.value })}
+                      className="h-11 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#2A362B]"
+                    >
+                      <option value="">Selecione a tarefa</option>
+                      {tarefasDisponiveis.map((tarefa) => (
+                        <option key={tarefa.id} value={tarefa.id}>
+                          {tarefa.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label className="text-gray-600 text-sm">ID para Integração</Label>
                   <div className="relative">
@@ -352,13 +437,57 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
               </div>
             </div>
             
-            <div className="flex justify-between pt-8 border-t border-gray-100"><Button variant="ghost" onClick={() => setActiveTab("geral")} className="text-gray-500 font-medium">Voltar</Button><Button onClick={() => setActiveTab("locais")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white h-11 px-8 rounded-md transition-colors">Próxima <ArrowRight className="h-4 w-4 ml-2" /></Button></div>
+            <div className="flex justify-between pt-8 border-t border-gray-100"><Button variant="ghost" onClick={() => setActiveTab("geral")} className="text-gray-500 font-medium">Voltar</Button><Button onClick={() => setActiveTab("tarefas")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white h-11 px-8 rounded-md transition-colors">Próxima <ArrowRight className="h-4 w-4 ml-2" /></Button></div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tarefas" className="mt-0">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 space-y-6 min-h-[600px]">
+            <h2 className="text-[15px] font-bold text-[#2A362B] mb-8">3. Vincule tarefas a esta rota</h2>
+            
+            <div className="max-w-md space-y-2">
+              <Label className="text-gray-600 text-sm">Tarefa Principal *</Label>
+              <select
+                value={formData.tarefaId}
+                onChange={(e) => setFormData({ ...formData, tarefaId: e.target.value })}
+                className="h-11 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#2A362B]"
+              >
+                <option value="">Selecione a tarefa principal</option>
+                {tarefasSelecionadas.map((tarefa) => (
+                  <option key={tarefa.id} value={tarefa.id}>
+                    {tarefa.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[450px]">
+              <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-gray-50 p-3 border-b text-xs font-bold text-gray-600 uppercase">Disponíveis ({tarefasDisponiveisNaoSelecionadas.length})</div>
+                <div className="p-2 border-b bg-white"><Input placeholder="Filtrar tarefa..." value={buscaTarefa} onChange={(e) => setBuscaTarefa(e.target.value)} className="h-9 text-xs focus-visible:ring-[#2A362B]" /></div>
+                <div className="flex-1 overflow-y-auto divide-y divide-gray-50 bg-white">
+                  {loadingTarefas ? <div className="flex items-center justify-center h-full"><Loader2 className="h-4 w-4 animate-spin" /></div> : tarefasFiltradas.length === 0 ? <div className="flex items-center justify-center h-full px-4 text-sm text-gray-500">Nenhuma tarefa disponível.</div> : tarefasFiltradas.map((tarefa, index) => (
+                    <div key={`td-${tarefa.id}-${index}`} className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"><span className="text-sm text-gray-700">{tarefa.nome}</span><Button onClick={() => adicionarTarefa(tarefa.id)} size="icon" variant="ghost" className="text-green-600 hover:text-green-700 hover:bg-green-50"><Plus className="h-4 w-4" /></Button></div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-[#2E3D2A] p-3 text-xs font-bold text-white uppercase">Selecionadas ({tarefasSelecionadas.length})</div>
+                <div className="flex-1 overflow-y-auto divide-y divide-gray-50 bg-white">
+                  {tarefasSelecionadas.length === 0 ? <div className="flex items-center justify-center h-full px-4 text-sm text-gray-500">Nenhuma tarefa selecionada.</div> : tarefasSelecionadas.map((tarefa, index) => (
+                    <div key={`ts-${tarefa.id}-${index}`} className="flex items-center justify-between p-3 bg-green-50/40 hover:bg-green-50/60 transition-colors"><span className="text-sm font-semibold text-[#2A362B]">{tarefa.nome}</span><Button onClick={() => removerTarefa(tarefa.id)} size="icon" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50"><X className="h-4 w-4" /></Button></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between pt-8 border-t border-gray-100"><Button variant="ghost" onClick={() => setActiveTab("pessoas")} className="text-gray-500 font-medium">Voltar</Button><Button onClick={() => setActiveTab("locais")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white h-11 px-8 rounded-md transition-colors">Próxima <ArrowRight className="h-4 w-4 ml-2" /></Button></div>
           </div>
         </TabsContent>
 
         <TabsContent value="locais" className="mt-0">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 space-y-6 min-h-[600px]">
-            <h2 className="text-[15px] font-bold text-[#2A362B] mb-8">3. Selecione os locais de atendimento</h2>
+            <h2 className="text-[15px] font-bold text-[#2A362B] mb-8">4. Selecione os locais de atendimento</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[450px]">
               <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
@@ -381,7 +510,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
             </div>
             
             <div className="flex justify-between pt-8 border-t border-gray-100">
-                <Button variant="ghost" onClick={() => setActiveTab("pessoas")} className="text-gray-500 font-medium">Voltar</Button>
+                <Button variant="ghost" onClick={() => setActiveTab("tarefas")} className="text-gray-500 font-medium">Voltar</Button>
                 <Button onClick={handleAtualizarRota} disabled={loadingSalvar} className="text-white px-10 h-11 rounded-md font-medium transition-colors" style={{ backgroundColor: COR_SELECAO }}>
                     {loadingSalvar && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar Alterações
                 </Button>

@@ -1,20 +1,24 @@
 export function buildApiUrl(path = "") {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const apiPath = `/api${normalizedPath}`;
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const apiPath = `/api${normalizedPath}`
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || ""
 
   if (!baseUrl) {
-    return apiPath;
+    return apiPath
   }
 
-  if (
-    typeof window !== "undefined" &&
-    (window.location.protocol === "https:" || baseUrl.startsWith("http://"))
-  ) {
-    return apiPath;
+  const normalizedBaseUrl = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`
+
+  if (typeof window === "undefined") {
+    return `${normalizedBaseUrl}${normalizedPath}`
   }
 
-  const normalizedBaseUrl = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+  const isSecurePage = window.location.protocol === "https:"
+  const isInsecureApi = normalizedBaseUrl.startsWith("http://")
 
-  return `${normalizedBaseUrl}${normalizedPath}`;
+  if (isSecurePage && isInsecureApi) {
+    return apiPath
+  }
+
+  return `${normalizedBaseUrl}${normalizedPath}`
 }

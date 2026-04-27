@@ -70,14 +70,14 @@ const MENU_ITEMS: MenuItem[] = [
   {
     title: "Visitas",
     icon: "/icons/location_away.png",
-    url: "/login",
+    url: "/dashboard/visita",
   
 
   },
   {
     title: "Book de Fotos",
     icon: "/icons/photo_camera.png",
-    url: "/login",
+    url: "/dashboard/album",
   },
   {
     title: "Usuários do Sistema",
@@ -112,7 +112,7 @@ export function AppSidebar() {
               (item.url !== '#' && pathname.startsWith(item.url));
 
             const containerClass = isActive 
-              ? "bg-[#2A362B] text-white  hover:text-white" 
+              ? "bg-[#2A362B] text-white  " 
               : " text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900";
 
             const renderIcon = () => {

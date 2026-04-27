@@ -11,6 +11,16 @@ const normalizedBackendApiUrl = backendApiUrl
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "zyntex-bucket.s3.sa-east-1.amazonaws.com",
+        pathname: "/**",
+      },
+    ],
+    minimumCacheTTL: 60 * 10,
+  },
   async rewrites() {
     if (!normalizedBackendApiUrl) {
       return [];
