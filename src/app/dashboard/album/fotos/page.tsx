@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Expand,
   Loader2,
+  RefreshCw,
   Search,
   X,
 } from "lucide-react"
@@ -23,6 +24,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Pagination,
   PaginationContent,
@@ -134,7 +145,11 @@ export default function AlbumFotosPage() {
   const [loadedImages, setLoadedImages] = React.useState<number[]>([])
   const [expandedGroups, setExpandedGroups] = React.useState<string[]>([])
   const [previewPhoto, setPreviewPhoto] = React.useState<AlbumPhoto | null>(null)
+  const [confirmReplacePhoto, setConfirmReplacePhoto] = React.useState<AlbumPhoto | null>(null)
+  const [replacingPhotoId, setReplacingPhotoId] = React.useState<number | null>(null)
   const previewContainerRef = React.useRef<HTMLDivElement>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const pendingReplacePhotoRef = React.useRef<AlbumPhoto | null>(null)
 
   const empresaExibida = React.useMemo(() => {
     const companyFromPhoto = fotos
@@ -401,8 +416,118 @@ export default function AlbumFotosPage() {
     }
   }
 
+  const updatePhotoInState = React.useCallback((updatedPhoto: AlbumPhoto) => {
+    setFotos((prev) =>
+      prev.map((photo) => (photo.id === updatedPhoto.id ? { ...photo, ...updatedPhoto } : photo))
+    )
+    setLoadedImages((prev) => prev.filter((id) => id !== updatedPhoto.id))
+    setPreviewPhoto((prev) =>
+      prev && prev.id === updatedPhoto.id ? { ...prev, ...updatedPhoto } : prev
+    )
+  }, [])
+
+  const requestReplacePhoto = (photo: AlbumPhoto) => {
+    setConfirmReplacePhoto(photo)
+  }
+
+  const openReplacePhotoPicker = (photo: AlbumPhoto) => {
+    pendingReplacePhotoRef.current = photo
+    fileInputRef.current?.click()
+  }
+
+  const confirmReplacePhotoPicker = () => {
+    if (!confirmReplacePhoto) {
+      return
+    }
+
+    openReplacePhotoPicker(confirmReplacePhoto)
+    setConfirmReplacePhoto(null)
+  }
+
+  const handleReplacePhotoFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const selectedFile = event.target.files?.[0]
+    const targetPhoto = pendingReplacePhotoRef.current
+
+    event.target.value = ""
+
+    if (!selectedFile || !targetPhoto) {
+      return
+    }
+
+    try {
+      setReplacingPhotoId(targetPhoto.id)
+      const formData = new FormData()
+      formData.append("file", selectedFile)
+
+      const response = await fetch(buildApiUrl(`/imagem/${targetPhoto.id}/trocar`), {
+        method: "PATCH",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Nao foi possivel alterar a foto selecionada.")
+      }
+
+      const updatedPhoto = (await response.json()) as AlbumPhoto
+      updatePhotoInState(updatedPhoto)
+    } catch (error) {
+      console.error("Erro ao alterar foto:", error)
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel alterar a foto selecionada."
+      )
+    } finally {
+      setReplacingPhotoId(null)
+      pendingReplacePhotoRef.current = null
+    }
+  }
+
   return (
     <section className="space-y-6 font-montserrat">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleReplacePhotoFileChange}
+      />
+
+      <AlertDialog
+        open={Boolean(confirmReplacePhoto)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmReplacePhoto(null)
+          }
+        }}
+      >
+        <AlertDialogContent className="font-montserrat">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#2A362B]">
+              Alterar foto?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmReplacePhoto
+                ? `Voce vai substituir a imagem "${getPhotoName(confirmReplacePhoto)}". Deseja continuar e selecionar uma nova foto?`
+                : "Deseja continuar com a troca da foto?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-200 text-gray-500">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmReplacePhotoPicker}
+              className="bg-[#2E3D2A] text-white hover:bg-[#1f2920]"
+            >
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm text-[#6f6f6f]">
           <Link href="/dashboard/album" className="hover:text-[#2A362B]">
@@ -627,9 +752,9 @@ export default function AlbumFotosPage() {
                                       )}
                                     </button>
 
-                                    <div className="min-w-0 flex-1">
-                                      <button
-                                        type="button"
+                                <div className="min-w-0 flex-1">
+                                  <button
+                                    type="button"
                                         onClick={() => openPreview(foto)}
                                         className="block max-w-full truncate text-left text-sm font-bold text-[#222222] transition hover:text-[#2A362B]"
                                       >
@@ -641,6 +766,24 @@ export default function AlbumFotosPage() {
                                       <Badge className="mt-1 rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
                                         ID {foto.id}
                                       </Badge>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          requestReplacePhoto(foto)
+                                        }}
+                                        disabled={replacingPhotoId === foto.id}
+                                        className="mt-2 h-8 px-2 text-xs text-[#2A362B] hover:bg-[#eef3ee] hover:text-[#2A362B]"
+                                      >
+                                        {replacingPhotoId === foto.id ? (
+                                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                                        )}
+                                        Alterar foto
+                                      </Button>
                                     </div>
                                   </div>
                                 )
@@ -740,6 +883,20 @@ export default function AlbumFotosPage() {
               </div>
 
               <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => requestReplacePhoto(previewPhoto)}
+                  disabled={replacingPhotoId === previewPhoto.id}
+                  className="h-10 rounded-xl border border-white/10 px-3 text-white hover:bg-white/10 hover:text-white"
+                >
+                  {replacingPhotoId === previewPhoto.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">Alterar foto</span>
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
