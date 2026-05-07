@@ -308,37 +308,21 @@ export default function AlbumFotosPage() {
     return gruposDeFotos.slice(start, end)
   }, [currentPage, gruposDeFotos])
 
+  const selectedPhotoId = checkedItems[0] ?? null
+
   const allVisibleChecked =
-    gruposDaPagina.length > 0 &&
-    gruposDaPagina.every((group) =>
-      group.fotos.every((foto) => checkedItems.includes(foto.id))
-    )
+    gruposDaPagina.length === 1 &&
+    gruposDaPagina[0].fotos.length === 1 &&
+    gruposDaPagina[0].fotos[0].id === selectedPhotoId
 
   const toggleAllVisible = (checked: boolean) => {
-    if (checked) {
-      setCheckedItems((prev) => {
-        const next = new Set(prev)
-        gruposDaPagina.forEach((group) =>
-          group.fotos.forEach((foto) => next.add(foto.id))
-        )
-        return Array.from(next)
-      })
-      return
+    if (!checked) {
+      setCheckedItems([])
     }
-
-    setCheckedItems((prev) =>
-      prev.filter(
-        (id) =>
-          !gruposDaPagina.some((group) => group.fotos.some((foto) => foto.id === id))
-      )
-    )
   }
 
   const toggleItem = (fotoId: number, checked: boolean) => {
-    setCheckedItems((prev) => {
-      if (checked) return Array.from(new Set([...prev, fotoId]))
-      return prev.filter((id) => id !== fotoId)
-    })
+    setCheckedItems(checked ? [fotoId] : [])
   }
 
   const toggleGroup = (groupId: string) => {
@@ -610,6 +594,7 @@ export default function AlbumFotosPage() {
             <Checkbox
               checked={allVisibleChecked}
               onCheckedChange={(checked) => toggleAllVisible(Boolean(checked))}
+              disabled
               className="border-[#d7d7d7]"
             />
             <button
@@ -698,6 +683,8 @@ export default function AlbumFotosPage() {
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                               {group.fotos.map((foto) => {
                                 const isChecked = checkedItems.includes(foto.id)
+                                const isBlockedByOtherSelection =
+                                  selectedPhotoId !== null && selectedPhotoId !== foto.id
                                 const nomeFoto = getPhotoName(foto)
                                 const photoSource = getPhotoSource(foto)
                                 const companyName = getPhotoCompanyName(foto)
@@ -717,6 +704,7 @@ export default function AlbumFotosPage() {
                                       onCheckedChange={(checked) =>
                                         toggleItem(foto.id, Boolean(checked))
                                       }
+                                      disabled={isBlockedByOtherSelection}
                                       className="border-[#d7d7d7]"
                                     />
 
@@ -760,9 +748,9 @@ export default function AlbumFotosPage() {
                                       >
                                         {nomeFoto}
                                       </button>
-                                      <p className="mt-1 truncate text-xs text-[#7a7a7a]">
+                                      {/* <p className="mt-1 truncate text-xs text-[#7a7a7a]">
                                         {companyName || empresaExibida || "Empresa não identificada"}
-                                      </p>
+                                      </p> */}
                                       <Badge className="mt-1 rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
                                         ID {foto.id}
                                       </Badge>

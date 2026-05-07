@@ -267,20 +267,7 @@ const validarTelefone = (tel: string) =>
           <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm p-8">
             <h2 className="text-lg font-semibold text-gray-800 mb-8 font-montserrat border-b pb-4">Login do promotor</h2>
             <div className="space-y-8 max-w-5xl">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Foto</Label>
-                <div className="md:col-span-10 flex items-center justify-between">
-                  <span className="text-sm text-gray-400 font-montserrat">150x150px JPEG, PNG Image</span>
-                  <div className="relative group">
-                    <Avatar className="h-20 w-20 border-2 border-gray-100 shadow-sm ring-1 ring-gray-100">
-                      <AvatarFallback className="bg-[#f0f2f5] flex items-center justify-center">
-                        <Camera className="h-8 w-8 text-gray-400" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <button className="absolute -top-1 -right-1 bg-white text-red-500 border border-red-500 rounded-full p-1 shadow-sm transition-colors"><X className="h-3 w-3" /></button>
-                  </div>
-                </div>
-              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label htmlFor="nome" className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Nome *</Label>
                 <div className="md:col-span-10 relative">

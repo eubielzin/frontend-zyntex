@@ -5,11 +5,10 @@ import { useEffect, useState } from "react";
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button"; // Importar Button
 import { useSidebar } from "@/components/ui/sidebar"; // Importar hook da Sidebar
-import { Bell, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { type StoredAuthUser, getStoredAuthUser } from "@/lib/auth-client";
 
@@ -59,30 +58,12 @@ export function DashboardHeader() {
           </Button>
         </div>
 
-        
-        <div className="flex items-center gap-2">
-
-              <div className="flex flex-row justify-between w-[65px]">
-
-                
-                <Button variant="ghost" 
-                        size="icon" 
-                        className="relative text-gray-400 hover:text-gray-900 opacity-70 hover:opacity-100 transition-opacity">
-                    <Bell className="size-6"/>
-                </Button>
-
-                <Button variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                    <Settings className="mr-1 size-6" />
-                </Button>
-                
-              </div>
-              <Avatar className="h-9 w-9 border border-gray-200">
-                <AvatarFallback className="bg-[#2A362B] text-white font-semibold text-sm">
-                  {getInitials(user.username)}
-                </AvatarFallback>
-              </Avatar>
+        <div className="flex items-center">
+          <Avatar className="h-9 w-9 border border-gray-200">
+            <AvatarFallback className="bg-[#2A362B] text-white font-semibold text-sm">
+              {getInitials(user.username)}
+            </AvatarFallback>
+          </Avatar>
         </div>
       </div>
     </header>

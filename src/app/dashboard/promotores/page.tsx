@@ -55,12 +55,21 @@ import { buildApiUrl } from "@/lib/api-url"
 interface Promotor {
   id: number;
   nome: string;
+  telefone?: string;
+  sexo?: string;
+  observacao?: string;
+  salario?: number;
   cidade: string;
-  username: string;
+  nomeSupervisor?: string;
+  ativo?: boolean;
+  cep?: string;
+  estado?: string;
   metaMensal: number;
   bateria: number;
   ultimo_sinc: string;
   ultimo_envio: string;
+  ultima_localizacao?: string;
+  ultimaLocalizacao?: string;
 }
 
 const AUTO_REFRESH_MS = 30000;
@@ -79,6 +88,29 @@ export default function ListaPromotoresPage() {
   const [totalElements, setTotalElements] = React.useState(0);
 
   const opcoes = ["Exportar dados", "Importar dados"];
+
+  const getUltimaLocalizacao = React.useCallback((promotor: Promotor) => {
+    return promotor.ultima_localizacao || promotor.ultimaLocalizacao || "";
+  }, []);
+
+  const getTelefonePromotor = React.useCallback((promotor: Promotor) => {
+    return promotor.telefone || "-"
+  }, [])
+
+  const formatarDataHora = React.useCallback((value?: string) => {
+    if (!value) {
+      return "Nunca"
+    }
+
+    try {
+      return new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(new Date(value))
+    } catch {
+      return value
+    }
+  }, [])
 
   // Evita duplicar /api
   const getApiUrl = () => {
@@ -357,7 +389,7 @@ export default function ListaPromotoresPage() {
                 </TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Nome</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Cidade</TableHead>
-                <TableHead className="text-xs font-medium text-gray-600 uppercase">Login</TableHead>
+                <TableHead className="text-xs font-medium text-gray-600 uppercase">Telefone</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Meta Mensal</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Bateria</TableHead>
                 <TableHead className="text-xs font-medium text-gray-600 uppercase">Sincronismo</TableHead>
@@ -393,7 +425,7 @@ export default function ListaPromotoresPage() {
                   </TableCell>
                   <TableCell className="font-medium text-gray-700">{promotor.nome}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{promotor.cidade || "-"}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{promotor.username}</TableCell>
+                  <TableCell className="text-gray-500 text-sm">{getTelefonePromotor(promotor)}</TableCell>
                   <TableCell className="text-gray-700 text-sm font-medium">
                     {new Intl.NumberFormat('de-DE').format(promotor.metaMensal)}
                   </TableCell>
@@ -405,7 +437,9 @@ export default function ListaPromotoresPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-500 text-sm">{promotor.ultimo_sinc || "Nunca"}</TableCell>
+                  <TableCell className="text-gray-500 text-sm">
+                    {formatarDataHora(getUltimaLocalizacao(promotor) || promotor.ultimo_sinc)}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
@@ -414,9 +448,32 @@ export default function ListaPromotoresPage() {
                         </Link>
                       </Button>
                       
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
-                        <MapPin className="h-4 w-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-[#2A362B] hover:bg-green-50">
+                            <MapPin className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="font-montserrat">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-[#2A362B]">
+                              Última localização
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              <strong>{promotor.nome}</strong>
+                              {" "}
+                              teve a última atualização de localização em
+                              {" "}
+                              <strong>{formatarDataHora(getUltimaLocalizacao(promotor))}</strong>.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogAction className="bg-[#2E3D2A] text-white hover:bg-[#1f2920]">
+                              Fechar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
 
                       {/* Card de Confirmação para Excluir */}
                       <AlertDialog>
