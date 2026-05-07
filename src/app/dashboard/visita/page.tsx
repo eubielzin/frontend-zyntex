@@ -348,9 +348,9 @@ export default function VisitaPage() {
         </Badge>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex w-full flex-1 flex-col gap-3 md:w-auto md:flex-row md:items-center md:gap-4">
             <div className="flex w-full max-w-[420px] items-center overflow-hidden rounded-md border border-gray-200 bg-white">
               <Input
                 type="search"
@@ -373,62 +373,63 @@ export default function VisitaPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTER_OPTIONS.map((option) => {
-              const isActive =
-                option.id === "todos"
-                  ? filtroAtivo === "todos"
-                  : filtroAtivo === option.id
+          <div className="flex w-full flex-col gap-3 md:w-auto">
+            <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
+              {FILTER_OPTIONS.map((option) => {
+                const isActive =
+                  option.id === "todos"
+                    ? filtroAtivo === "todos"
+                    : filtroAtivo === option.id
 
-              return (
-                <Button
-                  key={option.id}
-                  variant="outline"
-                  onClick={() =>
-                    setFiltroAtivo(option.id === "todos" ? "todos" : option.id)
-                  }
-                  className={`h-[40px] rounded-md border-gray-200 px-3 text-xs font-medium ${
-                    isActive
-                      ? "border-[#2A362B] bg-[#2A362B] text-white hover:bg-[#223124] hover:text-white"
-                      : "bg-white text-gray-600 hover:text-[#2A362B]"
-                  }`}
-                >
-                  {option.label}
-                </Button>
-              )
-            })}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-[40px] rounded-md border-gray-200 text-gray-700"
-                >
-                  Opções
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 p-2">
-                {MENU_OPTIONS.map((opcao) => (
-                  <DropdownMenuItem
-                    key={opcao}
-                    onClick={() => setOpcaoSelecionada(opcao)}
-                    className="flex cursor-pointer items-center justify-between rounded-md py-2.5"
+                return (
+                  <Button
+                    key={option.id}
+                    variant="outline"
+                    onClick={() =>
+                      setFiltroAtivo(option.id === "todos" ? "todos" : option.id)
+                    }
+                    className={`h-[40px] shrink-0 rounded-md border-gray-200 px-3 text-xs font-medium ${
+                      isActive
+                        ? "border-[#2A362B] bg-[#2A362B] text-white hover:bg-[#223124] hover:text-white"
+                        : "bg-white text-gray-600 hover:text-[#2A362B]"
+                    }`}
                   >
-                    <span>{opcao}</span>
-                    {opcaoSelecionada === opcao ? (
-                      <Check className="h-4 w-4 text-[#2A362B]" />
-                    ) : null}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    {option.label}
+                  </Button>
+                )
+              })}
 
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-[40px] shrink-0 rounded-md border-gray-200 text-gray-700"
+                  >
+                    Opções
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52 p-2">
+                  {MENU_OPTIONS.map((opcao) => (
+                    <DropdownMenuItem
+                      key={opcao}
+                      onClick={() => setOpcaoSelecionada(opcao)}
+                      className="flex cursor-pointer items-center justify-between rounded-md py-2.5"
+                    >
+                      <span>{opcao}</span>
+                      {opcaoSelecionada === opcao ? (
+                        <Check className="h-4 w-4 text-[#2A362B]" />
+                      ) : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-gray-100">
-          <Table>
+        <div className="overflow-x-auto rounded-xl border border-gray-100">
+          <Table className="min-w-[1100px]">
             <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead className="w-[50px]">

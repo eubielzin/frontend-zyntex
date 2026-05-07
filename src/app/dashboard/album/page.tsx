@@ -7,12 +7,11 @@ import {
   ChevronDown,
   Loader2,
   Pencil,
-  Plus,
   Search,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -20,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import {
   Pagination,
   PaginationContent,
@@ -39,44 +39,84 @@ import {
 } from "@/components/ui/table"
 import { buildApiUrl } from "@/lib/api-url"
 
-type AlbumCompany = {
+type RawAlbumCompany = {
   id: number
   nomeEmpresa: string
   quantidadeFotos: number
 }
 
-type AlbumPhoto = {
+type TaskLocalSource = {
   id: number
-  url: string
+  tarefaLocalId?: number | null
 }
 
-type PagedResponse = {
-  content?: AlbumCompany[]
-  totalPages?: number
-  totalElements?: number
-  number?: number
+type AlbumPhoto = {
+  id: number
+  url?: string
+  nomeArquivo?: string
+  caminho?: string
+}
+
+type AlbumGroup = {
+  id: string
+  nomeEmpresa: string
+  quantidadeFotos: number
+  albumIds: number[]
 }
 
 const PAGE_SIZE = 16
 
-const MOCK_ALBUMS: AlbumCompany[] = Array.from({ length: 10 }, (_, index) => ({
-  id: index + 1,
-  nomeEmpresa: `Nome da empresa ${index + 1}`,
-  quantidadeFotos: 10 + (index % 4) * 2,
-}))
+const extractCompanyNameFromSource = (source?: string) => {
+  const sanitizedSource = (source || "").trim().replace(/^https?:\/\//i, "")
+
+  if (!sanitizedSource) {
+    return ""
+  }
+
+  const pathWithoutQuery = sanitizedSource.split("?")[0]
+  const [firstSegment] = pathWithoutQuery.split("/").filter(Boolean)
+
+  return firstSegment ? decodeURIComponent(firstSegment) : ""
+}
+
+const groupAlbumsByCompany = (albums: Array<RawAlbumCompany & { albumIds: number[] }>) => {
+  const groupedAlbums = new Map<string, AlbumGroup>()
+
+  albums.forEach((album) => {
+    const displayName = album.nomeEmpresa.trim() || `Album ${album.id}`
+    const groupKey = displayName.toLowerCase()
+
+    if (!groupedAlbums.has(groupKey)) {
+      groupedAlbums.set(groupKey, {
+        id: groupKey,
+        nomeEmpresa: displayName,
+        quantidadeFotos: album.quantidadeFotos,
+        albumIds: [...album.albumIds],
+      })
+      return
+    }
+
+    const currentGroup = groupedAlbums.get(groupKey)!
+    currentGroup.quantidadeFotos += album.quantidadeFotos
+    currentGroup.albumIds = Array.from(new Set([...currentGroup.albumIds, ...album.albumIds]))
+  })
+
+  return Array.from(groupedAlbums.values()).sort((firstAlbum, secondAlbum) =>
+    firstAlbum.nomeEmpresa.localeCompare(secondAlbum.nomeEmpresa, "pt-BR", {
+      sensitivity: "base",
+    })
+  )
+}
 
 export default function AlbumPage() {
-  const [albuns, setAlbuns] = React.useState<AlbumCompany[]>([])
+  const [albuns, setAlbuns] = React.useState<AlbumGroup[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
   const [termoBusca, setTermoBusca] = React.useState("")
   const [currentPage, setCurrentPage] = React.useState(0)
-  const [totalPages, setTotalPages] = React.useState(
-    Math.ceil(MOCK_ALBUMS.length / PAGE_SIZE)
-  )
-  const [totalElements, setTotalElements] = React.useState(MOCK_ALBUMS.length)
-  const [checkedItems, setCheckedItems] = React.useState<number[]>([])
+  const [checkedItems, setCheckedItems] = React.useState<string[]>([])
 
-  const getApiUrl = React.useCallback(() => buildApiUrl("/album"), [])
+  const getTaskLocalSourceUrl = React.useCallback(() => buildApiUrl("/validade"), [])
   const getAlbumPhotosUrl = React.useCallback(
     (albumId: number) => buildApiUrl(`/imagem/tarefa-local/${albumId}`),
     []
@@ -84,150 +124,189 @@ export default function AlbumPage() {
 
   const enrichAlbumsWithPhotoCount = React.useCallback(
     async (
-      albums: AlbumCompany[],
+      taskLocalIds: number[],
       signal?: AbortSignal
-    ): Promise<AlbumCompany[]> => {
-      const albumsWithCount = await Promise.all(
-        albums.map(async (album) => {
+    ): Promise<Array<RawAlbumCompany & { albumIds: number[] }>> => {
+      const groupedByTaskLocal = await Promise.all(
+        taskLocalIds.map(async (taskLocalId) => {
           try {
-            const response = await fetch(getAlbumPhotosUrl(album.id), { signal })
+            const response = await fetch(getAlbumPhotosUrl(taskLocalId), { signal })
 
             if (!response.ok) {
-              throw new Error(`Erro ao buscar fotos do album ${album.id}`)
+              throw new Error(`Erro ao buscar fotos do tarefaLocal ${taskLocalId}`)
             }
 
             const data = (await response.json()) as AlbumPhoto[]
-            const quantidadeFotos = Array.isArray(data) ? data.length : 0
+            const photoList = Array.isArray(data) ? data : []
+            const photoCountByCompany = new Map<
+              string,
+              { displayName: string; quantidadeFotos: number }
+            >()
 
-            return {
-              ...album,
-              quantidadeFotos,
+            photoList.forEach((photo) => {
+              const companyName = extractCompanyNameFromSource(
+                photo.caminho?.trim() || photo.url?.trim() || ""
+              )
+
+              if (!companyName) {
+                return
+              }
+
+              const companyKey = companyName.toLowerCase()
+              const currentEntry = photoCountByCompany.get(companyKey)
+
+              photoCountByCompany.set(companyKey, {
+                displayName: currentEntry?.displayName || companyName,
+                quantidadeFotos: (currentEntry?.quantidadeFotos || 0) + 1,
+              })
+            })
+
+            if (photoCountByCompany.size === 0) {
+              return []
             }
+
+            return Array.from(photoCountByCompany.values()).map(
+              ({ displayName, quantidadeFotos }) => {
+                return {
+                  id: taskLocalId,
+                  nomeEmpresa: displayName || `Album ${taskLocalId}`,
+                  quantidadeFotos,
+                  albumIds: [taskLocalId],
+                }
+              }
+            )
           } catch (error) {
             if (signal?.aborted) {
               throw error
             }
 
-            console.error(
-              `Erro ao calcular quantidade de fotos do album ${album.id}:`,
-              error
-            )
-
-            return {
-              ...album,
-              quantidadeFotos:
-                typeof album.quantidadeFotos === "number"
-                  ? album.quantidadeFotos
-                  : 0,
-            }
+            console.error(`Erro ao enriquecer o tarefaLocal ${taskLocalId}:`, error)
+            return []
           }
         })
       )
 
-      return albumsWithCount
+      return groupedByTaskLocal.flat()
     },
     [getAlbumPhotosUrl]
   )
 
-  const loadMockPage = React.useCallback((page: number) => {
-    const start = page * PAGE_SIZE
-    const end = start + PAGE_SIZE
-
-    setAlbuns(MOCK_ALBUMS.slice(start, end))
-    setTotalPages(Math.ceil(MOCK_ALBUMS.length / PAGE_SIZE))
-    setTotalElements(MOCK_ALBUMS.length)
-    setCurrentPage(page)
-  }, [])
-
-  const fetchAlbuns = React.useCallback(
-    async (page: number, signal?: AbortSignal) => {
+  const fetchAllAlbums = React.useCallback(
+    async (signal?: AbortSignal) => {
       try {
         setLoading(true)
+        setLoadError(null)
 
-        const response = await fetch(
-          `${getApiUrl()}/paged?page=${page}&size=${PAGE_SIZE}`,
-          { signal }
+        const sourceResponse = await fetch(getTaskLocalSourceUrl(), { signal })
+
+        if (!sourceResponse.ok) {
+          throw new Error(`Erro ao buscar fontes do album: ${sourceResponse.status}`)
+        }
+
+        const sourceData = (await sourceResponse.json()) as TaskLocalSource[]
+        const taskLocalIds = Array.from(
+          new Set(
+            (Array.isArray(sourceData) ? sourceData : [])
+              .map((item) => item.tarefaLocalId)
+              .filter((value): value is number => typeof value === "number")
+          )
         )
 
-        if (!response.ok) {
-          loadMockPage(page)
+        if (taskLocalIds.length === 0) {
+          setAlbuns([])
           return
         }
 
-        const data = (await response.json()) as PagedResponse
-        const content = data.content || []
-        const albumsWithRealPhotoCount = await enrichAlbumsWithPhotoCount(
-          content,
-          signal
-        )
+        const albumsWithPhotoCount = await enrichAlbumsWithPhotoCount(taskLocalIds, signal)
 
         if (signal?.aborted) {
           return
         }
 
-        setAlbuns(albumsWithRealPhotoCount)
-        setTotalPages(data.totalPages || 1)
-        setCurrentPage(data.number || 0)
-        setTotalElements(data.totalElements || 0)
+        setAlbuns(groupAlbumsByCompany(albumsWithPhotoCount))
       } catch (error) {
         if (signal?.aborted) {
           return
         }
 
         console.error("Erro ao buscar book de fotos:", error)
-        loadMockPage(page)
+        setAlbuns([])
+        setLoadError("Nao foi possivel carregar o book de fotos com os dados reais.")
       } finally {
         if (!signal?.aborted) {
           setLoading(false)
         }
       }
     },
-    [enrichAlbumsWithPhotoCount, getApiUrl, loadMockPage]
+    [enrichAlbumsWithPhotoCount, getTaskLocalSourceUrl]
   )
 
   React.useEffect(() => {
     const controller = new AbortController()
 
-    fetchAlbuns(currentPage, controller.signal)
+    fetchAllAlbums(controller.signal)
 
     return () => controller.abort()
-  }, [currentPage, fetchAlbuns])
+  }, [fetchAllAlbums])
 
   const albunsFiltrados = React.useMemo(() => {
-    const termoNormalizado = termoBusca.trim().toLowerCase()
+    const normalizedTerm = termoBusca.trim().toLowerCase()
 
-    if (!termoNormalizado) return albuns
+    if (!normalizedTerm) {
+      return albuns
+    }
 
     return albuns.filter((album) => {
       return (
-        album.nomeEmpresa.toLowerCase().includes(termoNormalizado) ||
-        String(album.id).includes(termoNormalizado)
+        album.nomeEmpresa.toLowerCase().includes(normalizedTerm) ||
+        album.albumIds.some((albumId) => String(albumId).includes(normalizedTerm))
       )
     })
   }, [albuns, termoBusca])
 
+  const totalElements = albunsFiltrados.length
+  const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE))
+
+  React.useEffect(() => {
+    setCurrentPage(0)
+  }, [termoBusca])
+
+  React.useEffect(() => {
+    if (currentPage > totalPages - 1) {
+      setCurrentPage(Math.max(totalPages - 1, 0))
+    }
+  }, [currentPage, totalPages])
+
+  const albunsDaPagina = React.useMemo(() => {
+    const start = currentPage * PAGE_SIZE
+    return albunsFiltrados.slice(start, start + PAGE_SIZE)
+  }, [albunsFiltrados, currentPage])
+
   const allVisibleChecked =
-    albunsFiltrados.length > 0 &&
-    albunsFiltrados.every((album) => checkedItems.includes(album.id))
+    albunsDaPagina.length > 0 &&
+    albunsDaPagina.every((album) => checkedItems.includes(album.id))
 
   const toggleAllVisible = (checked: boolean) => {
     if (checked) {
       setCheckedItems((prev) => {
         const next = new Set(prev)
-        albunsFiltrados.forEach((album) => next.add(album.id))
+        albunsDaPagina.forEach((album) => next.add(album.id))
         return Array.from(next)
       })
       return
     }
 
     setCheckedItems((prev) =>
-      prev.filter((id) => !albunsFiltrados.some((album) => album.id === id))
+      prev.filter((id) => !albunsDaPagina.some((album) => album.id === id))
     )
   }
 
-  const toggleItem = (albumId: number, checked: boolean) => {
+  const toggleItem = (albumId: string, checked: boolean) => {
     setCheckedItems((prev) => {
-      if (checked) return Array.from(new Set([...prev, albumId]))
+      if (checked) {
+        return Array.from(new Set([...prev, albumId]))
+      }
+
       return prev.filter((id) => id !== albumId)
     })
   }
@@ -235,33 +314,33 @@ export default function AlbumPage() {
   const renderPaginationItems = () => {
     const items = []
 
-    for (let i = 0; i < totalPages; i++) {
-      const isBoundary = i === 0 || i === totalPages - 1
-      const isNearCurrent = Math.abs(currentPage - i) <= 1
+    for (let page = 0; page < totalPages; page++) {
+      const isBoundary = page === 0 || page === totalPages - 1
+      const isNearCurrent = Math.abs(currentPage - page) <= 1
 
       if (isBoundary || isNearCurrent) {
         items.push(
-          <PaginationItem key={i}>
+          <PaginationItem key={page}>
             <PaginationLink
               href="#"
               onClick={(event) => {
                 event.preventDefault()
-                setCurrentPage(i)
+                setCurrentPage(page)
               }}
-              isActive={currentPage === i}
+              isActive={currentPage === page}
               className={
-                currentPage === i
+                currentPage === page
                   ? "h-8 min-w-8 rounded-md bg-[#2A362B] px-3 text-white hover:bg-[#223124] hover:text-white"
                   : "h-8 min-w-8 rounded-md px-3 text-gray-600 hover:text-[#2A362B]"
               }
             >
-              {i + 1}
+              {page + 1}
             </PaginationLink>
           </PaginationItem>
         )
-      } else if (Math.abs(currentPage - i) === 2) {
+      } else if (Math.abs(currentPage - page) === 2) {
         items.push(
-          <PaginationItem key={i}>
+          <PaginationItem key={page}>
             <PaginationEllipsis className="text-gray-400" />
           </PaginationItem>
         )
@@ -274,7 +353,7 @@ export default function AlbumPage() {
   return (
     <section className="space-y-6 font-montserrat">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight text-[#2A362B]">
           Book de fotos
         </h1>
         <Badge className="w-fit rounded-full bg-[#d7ead8] px-3 py-1 text-xs font-medium text-[#638063] hover:bg-[#d7ead8]">
@@ -285,25 +364,22 @@ export default function AlbumPage() {
       <div className="rounded-xl border border-[#e7e7e7] bg-white p-4 shadow-sm md:p-6">
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
-            <div className="flex  max-w-[420px] items-center overflow-hidden rounded-xl border border-[#ececec] bg-white">
+            <div className="flex max-w-[420px] items-center overflow-hidden rounded-xl border border-[#ececec] bg-white">
               <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />  
-              <Input
-                type="search"
-                placeholder="Buscar pelo nome da empresa..."
-                value={termoBusca}
-                onChange={(event) => setTermoBusca(event.target.value)}
-                className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
-              />
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="search"
+                  placeholder="Buscar pelo nome da empresa..."
+                  value={termoBusca}
+                  onChange={(event) => setTermoBusca(event.target.value)}
+                  className="h-[45px] border-gray-200 bg-white pl-10 focus-visible:ring-0"
+                />
               </div>
-
-
-
             </div>
 
             <button
               type="button"
-              className="text-black font-bold hidden md:flex cursor-pointer text-sm"
+              className="hidden cursor-pointer text-sm font-bold text-black md:flex"
             >
               Pesquisa Avançada
             </button>
@@ -312,10 +388,7 @@ export default function AlbumPage() {
           <div className="flex flex-col gap-3 sm:flex-row">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="text-gray-700 group h-[45px]"
-                >
+                <Button variant="outline" className="group h-[45px] text-gray-700">
                   Filtrar
                   <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>
@@ -333,11 +406,6 @@ export default function AlbumPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Button className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
-              <Plus className="h-4 w-4" />
-              Adicionar foto
-            </Button>
           </div>
         </div>
 
@@ -347,7 +415,7 @@ export default function AlbumPage() {
               <div className="flex min-h-[320px] items-center justify-center">
                 <Loader2 className="h-7 w-7 animate-spin text-[#cf9d09]" />
               </div>
-            ) : albunsFiltrados.length > 0 ? (
+            ) : albunsDaPagina.length > 0 ? (
               <div className="overflow-hidden rounded-xl bg-white">
                 <Table>
                   <TableHeader>
@@ -355,26 +423,18 @@ export default function AlbumPage() {
                       <TableHead className="w-12 pl-3">
                         <Checkbox
                           checked={allVisibleChecked}
-                          onCheckedChange={(checked) =>
-                            toggleAllVisible(Boolean(checked))
-                          }
+                          onCheckedChange={(checked) => toggleAllVisible(Boolean(checked))}
                           className="border-[#d7d7d7]"
                         />
                       </TableHead>
                       <TableHead className="h-12 px-2 text-xs font-medium text-[#7b7b7b]">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1"
-                        >
-                          Arquivo
+                        <button type="button" className="inline-flex items-center gap-1">
+                          Empresa
                           <ChevronDown className="h-3.5 w-3.5 rotate-180" />
                         </button>
                       </TableHead>
                       <TableHead className="h-12 px-2 text-right text-xs font-medium text-[#7b7b7b]">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1"
-                        >
+                        <button type="button" className="inline-flex items-center gap-1">
                           Quantidade de Fotos
                           <ChevronDown className="h-3.5 w-3.5 rotate-180" />
                         </button>
@@ -386,8 +446,10 @@ export default function AlbumPage() {
                   </TableHeader>
 
                   <TableBody>
-                    {albunsFiltrados.map((album) => {
+                    {albunsDaPagina.map((album) => {
                       const isChecked = checkedItems.includes(album.id)
+                      const albumIdsParam = album.albumIds.join(",")
+                      const empresaParam = encodeURIComponent(album.nomeEmpresa)
 
                       return (
                         <TableRow
@@ -406,7 +468,7 @@ export default function AlbumPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <Link
-                              href={`/dashboard/album/fotos?empresa=${encodeURIComponent(album.nomeEmpresa)}&albumId=${album.id}`}
+                              href={`/dashboard/album/fotos?empresa=${empresaParam}&albumIds=${albumIdsParam}`}
                               className="truncate text-sm font-medium text-[#4a4a4a] underline-offset-2 hover:text-[#2A362B] hover:underline"
                             >
                               {album.nomeEmpresa}
@@ -423,7 +485,7 @@ export default function AlbumPage() {
                               className="h-8 w-8 text-[#6b6b6b] hover:bg-[#eef3ee] hover:text-[#2A362B]"
                             >
                               <Link
-                                href={`/dashboard/album/fotos?empresa=${encodeURIComponent(album.nomeEmpresa)}&albumId=${album.id}`}
+                                href={`/dashboard/album/fotos?empresa=${empresaParam}&albumIds=${albumIdsParam}`}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Link>
@@ -442,10 +504,12 @@ export default function AlbumPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-lg font-semibold text-[#2A362B]">
-                    Nenhum arquivo encontrado
+                    {loadError ? "Erro ao carregar o album" : "Nenhuma empresa encontrada"}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Ajuste a busca para visualizar outros albuns.
+                    {loadError
+                      ? loadError
+                      : "Ajuste a busca para visualizar outros agrupamentos."}
                   </p>
                 </div>
                 <Button
@@ -460,7 +524,7 @@ export default function AlbumPage() {
           </div>
         </div>
 
-        {totalPages > 0 && (
+        {totalPages > 0 ? (
           <div className="mt-6 flex justify-center">
             <Pagination>
               <PaginationContent>
@@ -469,7 +533,9 @@ export default function AlbumPage() {
                     href="#"
                     onClick={(event) => {
                       event.preventDefault()
-                      if (currentPage > 0) setCurrentPage(currentPage - 1)
+                      if (currentPage > 0) {
+                        setCurrentPage(currentPage - 1)
+                      }
                     }}
                     className={
                       currentPage === 0
@@ -486,7 +552,9 @@ export default function AlbumPage() {
                     href="#"
                     onClick={(event) => {
                       event.preventDefault()
-                      if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1)
+                      if (currentPage < totalPages - 1) {
+                        setCurrentPage(currentPage + 1)
+                      }
                     }}
                     className={
                       currentPage >= totalPages - 1
@@ -498,8 +566,8 @@ export default function AlbumPage() {
               </PaginationContent>
             </Pagination>
           </div>
-        )}
-      </div>
+        ) : null}
+                </div>
     </section>
   )
 }

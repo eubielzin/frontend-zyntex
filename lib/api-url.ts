@@ -7,18 +7,10 @@ export function buildApiUrl(path = "") {
     return apiPath
   }
 
-  const normalizedBaseUrl = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`
-
-  if (typeof window === "undefined") {
-    return `${normalizedBaseUrl}${normalizedPath}`
-  }
-
-  const isSecurePage = window.location.protocol === "https:"
-  const isInsecureApi = normalizedBaseUrl.startsWith("http://")
-
-  if (isSecurePage && isInsecureApi) {
+  if (typeof window !== "undefined") {
     return apiPath
   }
 
+  const normalizedBaseUrl = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`
   return `${normalizedBaseUrl}${normalizedPath}`
 }

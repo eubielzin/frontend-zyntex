@@ -82,7 +82,7 @@ const MENU_ITEMS: MenuItem[] = [
   {
     title: "Usuários do Sistema",
     icon: "/icons/groups.png",
-    url: "/login",
+    url: "/dashboard/usuarios",
   },
 ]
 

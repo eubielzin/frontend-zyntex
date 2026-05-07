@@ -227,7 +227,7 @@ export default function ListaIndustriasPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 font-montserrat">
       
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight font-montserrat">Indústrias</h1>
@@ -236,12 +236,12 @@ export default function ListaIndustriasPage() {
         </Badge>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+        <div className="mb-6 flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           
-          <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-            <div className="relative w-full md:w-80">
+          <div className="flex min-w-0 w-full flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
+            <div className="relative w-full md:max-w-80">
               <Input 
                 type="search" 
                 placeholder="Buscar indústria na página..." 
@@ -252,18 +252,18 @@ export default function ListaIndustriasPage() {
                 }}
                 className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0" 
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"/>
             </div>
-              <p className="text-black font-bold hidden md:flex cursor-pointer text-sm" >
-                Pesquisa Avançada
-              </p>
+            <p className="hidden cursor-pointer text-sm font-bold text-black md:flex" >
+              Pesquisa Avançada
+            </p>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto xl:justify-end">
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="text-gray-700 group h-[45px] data-[state=open]:bg-gray-50 border-gray-200">
+                <Button variant="outline" className="group h-[45px] w-full border-gray-200 text-gray-700 data-[state=open]:bg-gray-50 sm:w-auto">
                   Opções 
                   <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>
@@ -292,17 +292,17 @@ export default function ListaIndustriasPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button asChild className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
+            <Button asChild className="h-[45px] w-full gap-2 bg-[#2E3D2A] text-white hover:bg-[#1f2920] sm:w-auto">
               <Link href="/dashboard/industrias/novo">
                 <Plus className="h-4 w-4" />
-                Adicionar item
+                Adicionar indústria
               </Link>
             </Button>
           </div>
         </div>
 
-        <div className="rounded-md border border-gray-100 overflow-hidden">
-          <Table>
+        <div className="min-w-0 w-full overflow-x-auto rounded-md border border-gray-100">
+          <Table className="min-w-[1120px]">
             <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead className="w-[50px]"><Checkbox className="translate-y-0.5 border-gray-300" /></TableHead>
@@ -395,7 +395,7 @@ export default function ListaIndustriasPage() {
 
         {/* CONTROLES DE PAGINAÇÃO DINÂMICOS - AGORA SEMPRE VISÍVEL QUANDO HÁ RESULTADOS */}
         {totalPages > 0 && (
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex justify-center overflow-x-auto">
             <Pagination>
               <PaginationContent>
                 <PaginationItem>

@@ -207,7 +207,7 @@ export default function ListaItensPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-montserrat">
       
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">Itens</h1>
@@ -217,11 +217,11 @@ export default function ListaItensPage() {
         </Badge>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
         
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           
-          <div className="flex items-center gap-4 w-full md:w-auto flex-1">
+          <div className="flex w-full flex-1 flex-col gap-3 md:w-auto md:flex-row md:items-center md:gap-4">
             <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input 
@@ -237,11 +237,11 @@ export default function ListaItensPage() {
               </p>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="text-gray-700 group h-[45px] data-[state=open]:bg-gray-50 border-gray-200">
+                <Button variant="outline" className="text-gray-700 group h-[45px] w-full sm:w-auto data-[state=open]:bg-gray-50 border-gray-200">
                   Opções 
                   <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>
@@ -270,7 +270,7 @@ export default function ListaItensPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button asChild className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
+            <Button asChild className="bg-[#2E3D2A] h-[45px] w-full sm:w-auto hover:bg-[#1f2920] text-white gap-2">
               <Link href="/dashboard/itens/novo">
                 <Plus className="h-4 w-4" />
                 Adicionar item
@@ -279,8 +279,8 @@ export default function ListaItensPage() {
           </div>
         </div>
 
-        <div className="rounded-md border border-gray-100">
-          <Table>
+        <div className="overflow-x-auto rounded-md border border-gray-100">
+          <Table className="min-w-[960px]">
             <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead className="w-[50px]">

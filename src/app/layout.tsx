@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Montserrat } from "next/font/google"; 
+
+import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -39,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${montserrat.variable} ${kamerik.variable} font-sans antialiased`}>
+        <AuthBootstrap />
         {children}
       </body>
     </html>

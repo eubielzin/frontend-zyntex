@@ -1,21 +1,17 @@
 "use client" // Importante para usar hooks
 
+import { useEffect, useState } from "react";
+
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button"; // Importar Button
 import { useSidebar } from "@/components/ui/sidebar"; // Importar hook da Sidebar
-import { ChevronDown, ChevronLeft, ChevronRight, LogOut, Settings, Search, Bell, User } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+
+import { type StoredAuthUser, getStoredAuthUser } from "@/lib/auth-client";
 
 function getInitials(name: string): string {
   const initials = name
@@ -28,12 +24,19 @@ function getInitials(name: string): string {
 
 export function DashboardHeader() {
   const { toggleSidebar, open } = useSidebar();
+  const [user, setUser] = useState<StoredAuthUser>({
+    username: "Usuário",
+    email: "",
+    role: "",
+  });
 
-  const user = {
-    username: "Gabriel",
+  useEffect(() => {
+    const storedUser = getStoredAuthUser();
 
-    avatarUrl: "" 
-  };
+    if (storedUser) {
+      setUser(storedUser);
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur px-4 shadow-sm">
@@ -59,14 +62,6 @@ export function DashboardHeader() {
         
         <div className="flex items-center gap-2">
 
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-sm font-semibold text-gray-700">
-                  
-                </span>
-                <span className="text-xs text-muted-foreground max-w-[150px] truncate">
-                 
-                </span>
-              </div>
               <div className="flex flex-row justify-between w-[65px]">
 
                 
@@ -84,7 +79,6 @@ export function DashboardHeader() {
                 
               </div>
               <Avatar className="h-9 w-9 border border-gray-200">
-                <AvatarImage src={user.avatarUrl} />
                 <AvatarFallback className="bg-[#2A362B] text-white font-semibold text-sm">
                   {getInitials(user.username)}
                 </AvatarFallback>

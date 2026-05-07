@@ -8,9 +8,10 @@ import { buildApiUrl } from "@/lib/api-url"
 import {
   Camera,
   ChevronDown,
+  Expand,
   Loader2,
-  Plus,
   Search,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,26 +35,95 @@ import {
 
 type AlbumPhoto = {
   id: number
-  url: string
+  url?: string
+  nomeArquivo?: string
+  caminho?: string
+}
+
+type PhotoGroup = {
+  id: string
+  nome: string
+  fotos: AlbumPhoto[]
 }
 
 const PAGE_SIZE = 16
 
-const getPhotoName = (url: string) => {
+const getPathSegmentsFromSource = (source?: string) => {
+  const value = (source || "").trim()
+
+  if (!value) {
+    return []
+  }
+
   try {
-    const parsedUrl = new URL(url)
+    return new URL(value).pathname.split("/").filter(Boolean)
+  } catch {
+    return value
+      .replace(/^https?:\/\//i, "")
+      .split("?")[0]
+      .split("/")
+      .filter(Boolean)
+  }
+}
+
+const getPhotoName = (photo: AlbumPhoto) => {
+  if (photo.nomeArquivo?.trim()) {
+    return photo.nomeArquivo.trim()
+  }
+
+  const imagePath = photo.caminho?.trim()
+  const imageUrl = photo.url?.trim()
+  const source = imagePath || imageUrl || ""
+
+  try {
+    const parsedUrl = new URL(source)
     const fileName = parsedUrl.pathname.split("/").pop()
     return fileName || "Foto"
   } catch {
-    const sanitizedUrl = url.split("?")[0]
+    const sanitizedUrl = source.split("?")[0]
     return sanitizedUrl.split("/").pop() || "Foto"
   }
+}
+
+const getPhotoSource = (photo: AlbumPhoto) => {
+  return photo.url?.trim() || photo.caminho?.trim() || ""
+}
+
+const getPhotoCompanyName = (photo: AlbumPhoto) => {
+  const source = photo.caminho?.trim() || getPhotoSource(photo)
+  const [firstSegment] = getPathSegmentsFromSource(source)
+
+  return firstSegment || ""
+}
+
+const getPhotoGroupName = (photo: AlbumPhoto) => {
+  const source = photo.caminho?.trim() || getPhotoSource(photo)
+  const [, secondSegment] = getPathSegmentsFromSource(source)
+
+  return secondSegment || "Sem categoria"
+}
+
+const normalizeCompanyName = (value?: string | null) => {
+  return (value || "").trim().toLowerCase()
 }
 
 export default function AlbumFotosPage() {
   const searchParams = useSearchParams()
   const empresa = searchParams.get("empresa") || "Nome da empresa"
+  const empresaNormalizada = React.useMemo(() => normalizeCompanyName(empresa), [empresa])
+  const albumIdsParam = searchParams.get("albumIds")
   const albumId = searchParams.get("albumId")
+  const albumIds = React.useMemo(() => {
+    const rawIds = albumIdsParam
+      ? albumIdsParam.split(",")
+      : albumId
+        ? [albumId]
+        : []
+
+    return rawIds
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0)
+  }, [albumId, albumIdsParam])
 
   const [loading, setLoading] = React.useState(true)
   const [termoBusca, setTermoBusca] = React.useState("")
@@ -62,12 +132,23 @@ export default function AlbumFotosPage() {
   const [fotos, setFotos] = React.useState<AlbumPhoto[]>([])
   const [errorMessage, setErrorMessage] = React.useState("")
   const [loadedImages, setLoadedImages] = React.useState<number[]>([])
+  const [expandedGroups, setExpandedGroups] = React.useState<string[]>([])
+  const [previewPhoto, setPreviewPhoto] = React.useState<AlbumPhoto | null>(null)
+  const previewContainerRef = React.useRef<HTMLDivElement>(null)
+
+  const empresaExibida = React.useMemo(() => {
+    const companyFromPhoto = fotos
+      .map((photo) => getPhotoCompanyName(photo))
+      .find((companyName) => companyName.length > 0)
+
+    return companyFromPhoto || empresa
+  }, [empresa, fotos])
 
   React.useEffect(() => {
     const controller = new AbortController()
 
     const fetchFotos = async () => {
-      if (!albumId) {
+      if (albumIds.length === 0) {
         setFotos([])
         setErrorMessage("Nenhum album foi informado para consulta.")
         setLoading(false)
@@ -78,19 +159,40 @@ export default function AlbumFotosPage() {
         setLoading(true)
         setErrorMessage("")
 
-        const response = await fetch(
-          buildApiUrl(`/imagem/tarefa-local/${albumId}`),
-          { signal: controller.signal }
+        const responses = await Promise.all(
+          albumIds.map((currentAlbumId) =>
+            fetch(buildApiUrl(`/imagem/tarefa-local/${currentAlbumId}`), {
+              signal: controller.signal,
+            })
+          )
         )
 
-        if (!response.ok) {
+        if (responses.some((response) => !response.ok)) {
           throw new Error("Nao foi possivel carregar as fotos deste album.")
         }
 
-        const data = (await response.json()) as AlbumPhoto[]
-        setFotos(Array.isArray(data) ? data : [])
+        const photosByAlbum = await Promise.all(
+          responses.map(async (response) => {
+            const data = (await response.json()) as AlbumPhoto[]
+            return Array.isArray(data) ? data : []
+          })
+        )
+
+        const mergedPhotos = photosByAlbum.flat()
+        const uniquePhotos = Array.from(
+          new Map(mergedPhotos.map((photo) => [photo.id, photo])).values()
+        )
+        const filteredPhotos = empresaNormalizada
+          ? uniquePhotos.filter(
+              (photo) =>
+                normalizeCompanyName(getPhotoCompanyName(photo)) === empresaNormalizada
+            )
+          : uniquePhotos
+
+        setFotos(filteredPhotos)
         setCurrentPage(0)
         setLoadedImages([])
+        setExpandedGroups([])
       } catch (error) {
         if (controller.signal.aborted) return
 
@@ -111,28 +213,73 @@ export default function AlbumFotosPage() {
     fetchFotos()
 
     return () => controller.abort()
-  }, [albumId])
+  }, [albumIds, empresaNormalizada])
 
   const fotosFiltradas = React.useMemo(() => {
     const termo = termoBusca.trim().toLowerCase()
     if (!termo) return fotos
 
     return fotos.filter((foto) => {
-      const nomeFoto = getPhotoName(foto.url).toLowerCase()
+      const nomeFoto = getPhotoName(foto).toLowerCase()
+      const photoSource = getPhotoSource(foto).toLowerCase()
+      const photoPath = foto.caminho?.toLowerCase() || ""
+      const photoGroupName = getPhotoGroupName(foto).toLowerCase()
+
       return (
         nomeFoto.includes(termo) ||
-        foto.url.toLowerCase().includes(termo) ||
+        photoGroupName.includes(termo) ||
+        photoSource.includes(termo) ||
+        photoPath.includes(termo) ||
         String(foto.id).includes(termo)
       )
     })
   }, [fotos, termoBusca])
 
+  const gruposDeFotos = React.useMemo(() => {
+    const groupsMap = new Map<string, PhotoGroup>()
+
+    fotosFiltradas.forEach((foto) => {
+      const groupName = getPhotoGroupName(foto)
+      const groupKey = normalizeCompanyName(groupName) || "sem-categoria"
+      const currentGroup = groupsMap.get(groupKey)
+
+      if (!currentGroup) {
+        groupsMap.set(groupKey, {
+          id: groupKey,
+          nome: groupName,
+          fotos: [foto],
+        })
+        return
+      }
+
+      currentGroup.fotos.push(foto)
+    })
+
+    return Array.from(groupsMap.values()).sort((firstGroup, secondGroup) =>
+      firstGroup.nome.localeCompare(secondGroup.nome, "pt-BR", {
+        sensitivity: "base",
+      })
+    )
+  }, [fotosFiltradas])
+
   const totalElements = fotosFiltradas.length
-  const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE))
+  const totalGroups = gruposDeFotos.length
+  const totalPages = Math.max(1, Math.ceil(totalGroups / PAGE_SIZE))
 
   React.useEffect(() => {
     setCurrentPage(0)
   }, [termoBusca])
+
+  React.useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewPhoto(null)
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape)
+    return () => window.removeEventListener("keydown", handleEscape)
+  }, [])
 
   React.useEffect(() => {
     if (currentPage > totalPages - 1) {
@@ -140,28 +287,35 @@ export default function AlbumFotosPage() {
     }
   }, [currentPage, totalPages])
 
-  const fotosDaPagina = React.useMemo(() => {
+  const gruposDaPagina = React.useMemo(() => {
     const start = currentPage * PAGE_SIZE
     const end = start + PAGE_SIZE
-    return fotosFiltradas.slice(start, end)
-  }, [currentPage, fotosFiltradas])
+    return gruposDeFotos.slice(start, end)
+  }, [currentPage, gruposDeFotos])
 
   const allVisibleChecked =
-    fotosDaPagina.length > 0 &&
-    fotosDaPagina.every((foto) => checkedItems.includes(foto.id))
+    gruposDaPagina.length > 0 &&
+    gruposDaPagina.every((group) =>
+      group.fotos.every((foto) => checkedItems.includes(foto.id))
+    )
 
   const toggleAllVisible = (checked: boolean) => {
     if (checked) {
       setCheckedItems((prev) => {
         const next = new Set(prev)
-        fotosDaPagina.forEach((foto) => next.add(foto.id))
+        gruposDaPagina.forEach((group) =>
+          group.fotos.forEach((foto) => next.add(foto.id))
+        )
         return Array.from(next)
       })
       return
     }
 
     setCheckedItems((prev) =>
-      prev.filter((id) => !fotosDaPagina.some((foto) => foto.id === id))
+      prev.filter(
+        (id) =>
+          !gruposDaPagina.some((group) => group.fotos.some((foto) => foto.id === id))
+      )
     )
   }
 
@@ -169,6 +323,16 @@ export default function AlbumFotosPage() {
     setCheckedItems((prev) => {
       if (checked) return Array.from(new Set([...prev, fotoId]))
       return prev.filter((id) => id !== fotoId)
+    })
+  }
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      if (prev.includes(groupId)) {
+        return prev.filter((id) => id !== groupId)
+      }
+
+      return [...prev, groupId]
     })
   }
 
@@ -211,6 +375,32 @@ export default function AlbumFotosPage() {
     return items
   }
 
+  const openPreview = (photo: AlbumPhoto) => {
+    setPreviewPhoto(photo)
+  }
+
+  const closePreview = () => {
+    setPreviewPhoto(null)
+  }
+
+  const handleOpenFullscreen = async () => {
+    if (!previewContainerRef.current) {
+      return
+    }
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+        return
+      }
+
+      await previewContainerRef.current.requestFullscreen()
+    } catch (error) {
+      console.error("Nao foi possivel abrir a visualizacao em tela cheia:", error)
+      alert("Nao foi possivel abrir a imagem em tela cheia neste navegador.")
+    }
+  }
+
   return (
     <section className="space-y-6 font-montserrat">
       <div className="space-y-2">
@@ -219,14 +409,14 @@ export default function AlbumFotosPage() {
             Book de fotos
           </Link>
           <span>/</span>
-          <span className="truncate">{empresa}</span>
+          <span className="truncate">{empresaExibida}</span>
         </div>
 
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight font-montserrat">
           Book de fotos
         </h1>
         <Badge className="w-fit rounded-full bg-[#d7ead8] px-3 py-1 text-xs font-medium text-[#638063] hover:bg-[#d7ead8]">
-          {loading ? "Carregando..." : `${totalElements} registros`}
+          {loading ? "Carregando..." : `${totalGroups} grupos / ${totalElements} fotos`}
         </Badge>
       </div>
 
@@ -283,13 +473,13 @@ export default function AlbumFotosPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
+            {/* <Button className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
               <Plus className="mr-2 h-4 w-4" />
               Adicionar foto
-            </Button>
+            </Button> */}
           </div>
         </div>
-,
+
         <div className="rounded-2xl border border-[#f0f0f0] bg-[#fafafa]">
           <div className="flex items-center gap-3 border-b border-[#efefef] px-4 py-3 text-xs text-[#7a7a7a]">
             <Checkbox
@@ -323,59 +513,143 @@ export default function AlbumFotosPage() {
                   <p className="text-sm text-gray-500">{errorMessage}</p>
                 </div>
               </div>
-            ) : fotosDaPagina.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {fotosDaPagina.map((foto) => {
-                  const isChecked = checkedItems.includes(foto.id)
-                  const nomeFoto = getPhotoName(foto.url)
-                  const isLoaded = loadedImages.includes(foto.id)
+            ) : gruposDaPagina.length > 0 ? (
+              <div className="space-y-4">
+                {gruposDaPagina.map((group) => {
+                  const isExpanded = expandedGroups.includes(group.id)
 
                   return (
-                    <label
-                      key={foto.id}
-                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all hover:border-[#d8e0d8] hover:shadow-[0_6px_18px_rgba(42,54,43,0.08)] ${
-                        isChecked ? "border-[#b8cbb8] ring-1 ring-[#d5e2d5]" : "border-[#e8e8e8]"
+                    <div
+                      key={group.id}
+                      className={`overflow-hidden rounded-2xl border bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all duration-300 ${
+                        isExpanded
+                          ? "border-[#d8e0d8] shadow-[0_10px_28px_rgba(42,54,43,0.08)]"
+                          : "border-[#e8e8e8] hover:border-[#d8e0d8] hover:shadow-[0_6px_18px_rgba(42,54,43,0.06)]"
                       }`}
                     >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={(checked) =>
-                          toggleItem(foto.id, Boolean(checked))
-                        }
-                        className="sr-only"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(group.id)}
+                        className={`flex w-full items-center justify-between gap-3 p-4 text-left transition-all duration-300 ${
+                          isExpanded ? "bg-[#fbfcfb]" : "hover:bg-[#fbfcfb]"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <h2 className="truncate text-base font-bold text-[#222222]">
+                            {group.nome}
+                          </h2>
+                          <p className="mt-1 truncate text-xs text-[#7a7a7a]">
+                            {empresaExibida || "Empresa não identificada"}
+                          </p>
+                        </div>
 
-                      <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#edf2ed] text-white">
-                        {!isLoaded ? (
-                          <div className="absolute inset-0 animate-pulse bg-[#dde6dd]" />
-                        ) : null}
-                        <Image
-                          src={foto.url}
-                          alt={nomeFoto}
-                          fill
-                          sizes="96px"
-                          priority={currentPage === 0 && foto.id <= 4}
-                          loading={currentPage === 0 && foto.id <= 4 ? "eager" : "lazy"}
-                          className={`object-cover transition-opacity duration-300 ${
-                            isLoaded ? "opacity-100" : "opacity-0"
-                          }`}
-                          onLoad={() =>
-                            setLoadedImages((prev) =>
-                              prev.includes(foto.id) ? prev : [...prev, foto.id]
-                            )
-                          }
-                        />
-                      </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Badge className="rounded-full bg-[#d7ead8] px-2.5 py-1 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
+                            {group.fotos.length} fotos
+                          </Badge>
+                          <span
+                            className={`flex h-8 w-8 items-center justify-center rounded-full text-[#2A362B] transition-all duration-300 ${
+                              isExpanded ? "bg-[#e8efe8]" : "bg-[#f3f5f3]"
+                            }`}
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform duration-300 ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                          </span>
+                        </div>
+                      </button>
 
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-[#222222]">
-                          {nomeFoto}
-                        </p>
-                        <Badge className="mt-1 rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
-                          ID {foto.id}
-                        </Badge>
+                      <div
+                        className={`grid transition-all duration-300 ease-out ${
+                          isExpanded
+                            ? "grid-rows-[1fr] opacity-100"
+                            : "grid-rows-[0fr] opacity-0"
+                        }`}
+                      >
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="border-t border-[#f1f1f1] p-4">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                              {group.fotos.map((foto) => {
+                                const isChecked = checkedItems.includes(foto.id)
+                                const nomeFoto = getPhotoName(foto)
+                                const photoSource = getPhotoSource(foto)
+                                const companyName = getPhotoCompanyName(foto)
+                                const isLoaded = loadedImages.includes(foto.id)
+
+                                return (
+                                  <div
+                                    key={foto.id}
+                                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all hover:border-[#d8e0d8] hover:shadow-[0_6px_18px_rgba(42,54,43,0.08)] ${
+                                      isChecked
+                                        ? "border-[#b8cbb8] ring-1 ring-[#d5e2d5]"
+                                        : "border-[#e8e8e8]"
+                                    }`}
+                                  >
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) =>
+                                        toggleItem(foto.id, Boolean(checked))
+                                      }
+                                      className="border-[#d7d7d7]"
+                                    />
+
+                                    <button
+                                      type="button"
+                                      onClick={() => openPreview(foto)}
+                                      className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#edf2ed] text-white ring-offset-2 transition focus:outline-none focus:ring-2 focus:ring-[#cf9d09]"
+                                    >
+                                      {!isLoaded ? (
+                                        <div className="absolute inset-0 animate-pulse bg-[#dde6dd]" />
+                                      ) : null}
+                                      {photoSource ? (
+                                        <Image
+                                          src={photoSource}
+                                          alt={nomeFoto}
+                                          fill
+                                          sizes="96px"
+                                          priority={currentPage === 0 && foto.id <= 4}
+                                          loading={currentPage === 0 && foto.id <= 4 ? "eager" : "lazy"}
+                                          className={`object-cover transition-opacity duration-300 ${
+                                            isLoaded ? "opacity-100" : "opacity-0"
+                                          }`}
+                                          onLoad={() =>
+                                            setLoadedImages((prev) =>
+                                              prev.includes(foto.id) ? prev : [...prev, foto.id]
+                                            )
+                                          }
+                                        />
+                                      ) : (
+                                        <div className="flex h-full w-full items-center justify-center text-[#5d755d]">
+                                          <Camera className="h-6 w-6" />
+                                        </div>
+                                      )}
+                                    </button>
+
+                                    <div className="min-w-0 flex-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => openPreview(foto)}
+                                        className="block max-w-full truncate text-left text-sm font-bold text-[#222222] transition hover:text-[#2A362B]"
+                                      >
+                                        {nomeFoto}
+                                      </button>
+                                      <p className="mt-1 truncate text-xs text-[#7a7a7a]">
+                                        {companyName || empresaExibida || "Empresa não identificada"}
+                                      </p>
+                                      <Badge className="mt-1 rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
+                                        ID {foto.id}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </label>
+                    </div>
                   )
                 })}
               </div>
@@ -444,6 +718,71 @@ export default function AlbumFotosPage() {
           </div>
         )}
       </div>
+
+      {previewPhoto ? (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onClick={closePreview}
+        >
+          <div
+            ref={previewContainerRef}
+            className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#101010] shadow-2xl sm:h-[94vh] sm:max-w-7xl sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-3 text-white sm:flex-row sm:items-start sm:justify-between md:px-6">
+              <div className="min-w-0 pr-2">
+                <p className="truncate text-sm font-semibold md:text-base">
+                  {getPhotoName(previewPhoto)}
+                </p>
+                <p className="truncate text-xs text-white/60">
+                  {getPhotoCompanyName(previewPhoto) || empresaExibida || "Empresa não identificada"}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleOpenFullscreen}
+                  className="h-10 rounded-xl border border-white/10 px-3 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <Expand className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Tela cheia</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closePreview}
+                  className="h-10 w-10 rounded-xl text-white hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative flex min-h-0 flex-1 items-center justify-center bg-[#050505] p-2 sm:p-4 md:p-6">
+              {getPhotoSource(previewPhoto) ? (
+                <div className="relative h-full w-full">
+                  <Image
+                    src={getPhotoSource(previewPhoto)}
+                    alt={getPhotoName(previewPhoto)}
+                    fill
+                    sizes="100vw"
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 text-white/70">
+                  <Camera className="h-10 w-10" />
+                  <p className="text-sm">Imagem indisponível para visualização.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
