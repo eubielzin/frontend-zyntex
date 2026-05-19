@@ -1,23 +1,11 @@
 "use client"
 
 import * as React from "react"
-import {
-  Check,
-  ChevronDown,
-  MapPin,
-  Pencil,
-  Search,
-} from "lucide-react"
+import { ChevronDown, Clock3, MapPin, Search } from "lucide-react"
+import { useRouter } from "next/navigation"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
   Pagination,
@@ -36,534 +24,395 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { buildApiUrl } from "@/lib/api-url"
+import {
+  STATUS_LABELS,
+  mapPromotorRotaToVisit,
+  type PromotorRotaApiResponse,
+  type Visit,
+  type VisitStatus,
+} from "./_data"
 
-type VisitStatus = "hoje" | "campo" | "atrasada"
-
-type Visit = {
-  id: number
-  descricao: string
-  razaoSocial: string
-  indicadorAlternativo: string
-  estado: string
-  municipio: string
-  bairro: string
-  precisao: 1 | 2 | 3
-  status: VisitStatus
-}
-
-const PAGE_SIZE = 6
-
-const VISITAS_MOCK: Visit[] = [
-  {
-    id: 1,
-    descricao: "11 - MATEUS SUPERMERCADOS S.A. SUPER CIDADE OPERARIA",
-    razaoSocial: "mateus94",
-    indicadorAlternativo: "Maranhão",
-    estado: "São Luís",
-    municipio: "Cidade Operária",
-    bairro: "Operária",
-    precisao: 2,
-    status: "hoje",
-  },
-  {
-    id: 2,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Centro",
-    precisao: 3,
-    status: "campo",
-  },
-  {
-    id: 3,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Jardim América",
-    precisao: 3,
-    status: "hoje",
-  },
-  {
-    id: 4,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Cohab",
-    precisao: 1,
-    status: "atrasada",
-  },
-  {
-    id: 5,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Renascença",
-    precisao: 2,
-    status: "campo",
-  },
-  {
-    id: 6,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Calhau",
-    precisao: 3,
-    status: "hoje",
-  },
-  {
-    id: 7,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Anil",
-    precisao: 2,
-    status: "campo",
-  },
-  {
-    id: 8,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Turu",
-    precisao: 1,
-    status: "atrasada",
-  },
-  {
-    id: 9,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Olho d'Água",
-    precisao: 3,
-    status: "hoje",
-  },
-  {
-    id: 10,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Cohama",
-    precisao: 2,
-    status: "campo",
-  },
-  {
-    id: 11,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Vinhais",
-    precisao: 1,
-    status: "atrasada",
-  },
-  {
-    id: 12,
-    descricao: "Nome do local",
-    razaoSocial: "nome",
-    indicadorAlternativo: "Estado",
-    estado: "Município",
-    municipio: "Bairro",
-    bairro: "Ponta d'Areia",
-    precisao: 3,
-    status: "hoje",
-  },
-]
-
-const FILTER_OPTIONS = [
-  { id: "todos", label: "Ver tarefas de hoje" },
-  { id: "campo", label: "Ver tarefas em campo" },
-  { id: "atrasada", label: "Ver tarefas atrasadas" },
-] as const
-
-const MENU_OPTIONS = ["Exportar dados", "Importar dados"] as const
-
-const SORTABLE_HEADERS = [
-  "Descrição",
-  "Razão social",
-  "Indicador alternativo",
-  "Estado",
-  "Município",
-  "Bairro",
-  "Precisão",
-]
+const ITEMS_PER_PAGE = 8
 
 export default function VisitaPage() {
-  const [termoBusca, setTermoBusca] = React.useState("")
-  const [filtroAtivo, setFiltroAtivo] = React.useState<"todos" | VisitStatus>("todos")
-  const [opcaoSelecionada, setOpcaoSelecionada] =
-    React.useState<(typeof MENU_OPTIONS)[number]>("Exportar dados")
-  const [currentPage, setCurrentPage] = React.useState(0)
-  const [visitasSelecionadas, setVisitasSelecionadas] = React.useState<number[]>([])
+  const router = useRouter()
+  const [promotorRotas, setPromotorRotas] = React.useState<PromotorRotaApiResponse[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [search, setSearch] = React.useState("")
+  const [selectedStatus, setSelectedStatus] = React.useState<VisitStatus | "todos">("todos")
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [selectedRows, setSelectedRows] = React.useState<number[]>([])
 
-  const visitasFiltradas = React.useMemo(() => {
-    const termoNormalizado = termoBusca.trim().toLowerCase()
+  React.useEffect(() => {
+    const controller = new AbortController()
 
-    return VISITAS_MOCK.filter((visita) => {
-      const matchFiltro =
-        filtroAtivo === "todos" ? visita.status === "hoje" : visita.status === filtroAtivo
+    const fetchPromotorRotas = async () => {
+      try {
+        setLoading(true)
 
-      const matchBusca =
-        !termoNormalizado ||
-        visita.descricao.toLowerCase().includes(termoNormalizado) ||
-        visita.razaoSocial.toLowerCase().includes(termoNormalizado) ||
-        visita.bairro.toLowerCase().includes(termoNormalizado)
+        const response = await fetch(buildApiUrl("/promotor-rota"), {
+          signal: controller.signal,
+        })
 
-      return matchFiltro && matchBusca
+        if (!response.ok) {
+          throw new Error("Não foi possível carregar os vínculos de promotor.")
+        }
+
+        const data = await response.json()
+        setPromotorRotas(Array.isArray(data) ? data : [])
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return
+        }
+
+        console.error("Erro ao carregar vínculos de promotor da tela de visitas:", error)
+        setPromotorRotas([])
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchPromotorRotas()
+
+    return () => controller.abort()
+  }, [])
+
+  const visits = React.useMemo(
+    () => promotorRotas.map(mapPromotorRotaToVisit),
+    [promotorRotas]
+  )
+
+  const handleStatusToggle = (status: VisitStatus) => {
+    setSelectedStatus((currentStatus) => (currentStatus === status ? "todos" : status))
+    setCurrentPage(1)
+  }
+
+  const filteredData = React.useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase()
+
+    return visits.filter((visit) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        visit.descricao.toLowerCase().includes(normalizedSearch) ||
+        visit.razaoSocial.toLowerCase().includes(normalizedSearch) ||
+        visit.indicadorAlternativo.toLowerCase().includes(normalizedSearch) ||
+        visit.municipio.toLowerCase().includes(normalizedSearch) ||
+        visit.bairro.toLowerCase().includes(normalizedSearch)
+
+      const matchesStatus = selectedStatus === "todos" || visit.status === selectedStatus
+
+      return matchesSearch && matchesStatus
     })
-  }, [filtroAtivo, termoBusca])
+  }, [search, selectedStatus, visits])
 
-  const totalPages = Math.max(1, Math.ceil(visitasFiltradas.length / PAGE_SIZE))
-
-  React.useEffect(() => {
-    setCurrentPage(0)
-  }, [filtroAtivo, termoBusca])
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE))
 
   React.useEffect(() => {
-    if (currentPage > totalPages - 1) {
-      setCurrentPage(Math.max(0, totalPages - 1))
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
     }
   }, [currentPage, totalPages])
 
-  const visitasDaPagina = React.useMemo(() => {
-    const start = currentPage * PAGE_SIZE
-    return visitasFiltradas.slice(start, start + PAGE_SIZE)
-  }, [currentPage, visitasFiltradas])
+  const paginatedData = React.useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredData.slice(start, start + ITEMS_PER_PAGE)
+  }, [currentPage, filteredData])
 
-  React.useEffect(() => {
-    const idsVisiveis = new Set(visitasDaPagina.map((visita) => visita.id))
-    setVisitasSelecionadas((prev) => prev.filter((id) => idsVisiveis.has(id)))
-  }, [visitasDaPagina])
-
-  const todasVisitasVisiveisSelecionadas =
-    visitasDaPagina.length > 0 &&
-    visitasDaPagina.every((visita) => visitasSelecionadas.includes(visita.id))
-
-  const algumaVisitaSelecionada =
-    visitasSelecionadas.length > 0 && !todasVisitasVisiveisSelecionadas
-
-  const handleSelecionarTodas = (checked: boolean | "indeterminate") => {
-    if (checked) {
-      setVisitasSelecionadas(visitasDaPagina.map((visita) => visita.id))
-      return
-    }
-
-    setVisitasSelecionadas([])
+  const handleToggleRow = (id: number) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
   }
 
-  const handleSelecionarVisita = (
-    visitaId: number,
-    checked: boolean | "indeterminate"
-  ) => {
-    setVisitasSelecionadas((prev) => {
-      if (checked) {
-        return prev.includes(visitaId) ? prev : [...prev, visitaId]
-      }
+  const handleToggleAll = () => {
+    const currentIds = paginatedData.map((visit) => visit.id)
+    const allSelected = currentIds.every((id) => selectedRows.includes(id))
 
-      return prev.filter((id) => id !== visitaId)
+    setSelectedRows((prev) =>
+      allSelected ? prev.filter((id) => !currentIds.includes(id)) : [...new Set([...prev, ...currentIds])]
+    )
+  }
+
+  const allCurrentPageSelected =
+    paginatedData.length > 0 && paginatedData.every((visit) => selectedRows.includes(visit.id))
+
+  const openVisitHistoryPage = (visit: Visit) => {
+    const params = new URLSearchParams({
+      id: String(visit.promotorId),
+      descricao: visit.descricao,
+      razaoSocial: visit.razaoSocial,
+      indicadorAlternativo: visit.indicadorAlternativo,
+      estado: visit.estado,
+      municipio: visit.municipio,
+      bairro: visit.bairro,
+      precisao: String(visit.precisao),
+      status: visit.status,
     })
+
+    router.push(`/dashboard/visita/visitaView?${params.toString()}`)
   }
-
-  const renderPaginationItems = () => {
-    const items = []
-
-    for (let i = 0; i < totalPages; i++) {
-      const isBoundary = i === 0 || i === totalPages - 1
-      const isNearCurrent = Math.abs(currentPage - i) <= 1
-
-      if (isBoundary || isNearCurrent) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              href="#"
-              onClick={(event) => {
-                event.preventDefault()
-                setCurrentPage(i)
-              }}
-              isActive={currentPage === i}
-              className={
-                currentPage === i
-                  ? "h-8 min-w-8 rounded-md bg-[#2A362B] text-white hover:bg-[#223124] hover:text-white"
-                  : "h-8 min-w-8 rounded-md text-gray-600 hover:text-[#2A362B]"
-              }
-            >
-              {i + 1}
-            </PaginationLink>
-          </PaginationItem>
-        )
-      } else if (Math.abs(currentPage - i) === 2) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationEllipsis className="text-gray-400" />
-          </PaginationItem>
-        )
-      }
-    }
-
-    return items
-  }
-
-  const renderPrecision = (precisao: 1 | 2 | 3) => (
-    <div className="flex items-center justify-center gap-1.5 text-[#41563f]">
-      {[1, 2, 3].map((nivel) => (
-        <MapPin
-          key={nivel}
-          className={`h-4 w-4 ${
-            nivel <= precisao ? "fill-[#41563f] text-[#41563f]" : "text-[#41563f]/40"
-          }`}
-        />
-      ))}
-    </div>
-  )
 
   return (
     <div className="space-y-6 font-montserrat">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-[#2A362B]">
-          Visitas
-        </h1>
-        <Badge
-          variant="secondary"
-          className="w-fit rounded-full bg-[#BFD8C5] px-3 py-1 text-xs font-normal text-[#3E583D] hover:bg-[#BFD8C5]"
-        >
-          {`${visitasFiltradas.length} registros`}
-        </Badge>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-[#25352C]">Promotores</h1>
+        <div className="inline-flex items-center rounded-full bg-[#d6eed8] px-3 py-1 text-xs font-medium text-[#5c8a61]">
+          {loading ? "Carregando..." : `${filteredData.length} registros`}
+        </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex w-full flex-1 flex-col gap-3 md:w-auto md:flex-row md:items-center md:gap-4">
-            <div className="flex w-full max-w-[420px] items-center overflow-hidden rounded-md border border-gray-200 bg-white">
+      <div className="rounded-[28px] border border-[#e8e6df] bg-white p-5 shadow-[0_16px_50px_rgba(26,40,31,0.06)] sm:p-6">
+        <div className="flex flex-col gap-4 border-b border-[#efeee8] pb-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="relative w-full max-w-full xl:max-w-[420px]">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#93a08f]" />
               <Input
-                type="search"
-                placeholder="Buscar..."
-                value={termoBusca}
-                onChange={(event) => setTermoBusca(event.target.value)}
-                className="h-[40px] border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setCurrentPage(1)
+                }}
+                placeholder="Buscar promotor..."
+                className="h-12 rounded-2xl border-[#e4e6db] pl-11 text-sm shadow-none placeholder:text-[#a2aa9d] focus-visible:ring-1 focus-visible:ring-[#cf9d09]"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mr-1 h-8 w-8 rounded-md text-[#2A362B] hover:bg-[#f5f7f5]"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
             </div>
 
-            <p className="hidden cursor-pointer text-sm font-bold text-black md:flex">
-              Pesquisa avançada
-            </p>
+            <button
+              type="button"
+              className="text-left text-sm font-semibold text-[#1d2a21] transition-colors hover:text-[#cf9d09]"
+            >
+              Pesquisa avancada
+            </button>
           </div>
 
-          <div className="flex w-full flex-col gap-3 md:w-auto">
-            <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
-              {FILTER_OPTIONS.map((option) => {
-                const isActive =
-                  option.id === "todos"
-                    ? filtroAtivo === "todos"
-                    : filtroAtivo === option.id
-
-                return (
-                  <Button
-                    key={option.id}
-                    variant="outline"
-                    onClick={() =>
-                      setFiltroAtivo(option.id === "todos" ? "todos" : option.id)
-                    }
-                    className={`h-[40px] shrink-0 rounded-md border-gray-200 px-3 text-xs font-medium ${
-                      isActive
-                        ? "border-[#2A362B] bg-[#2A362B] text-white hover:bg-[#223124] hover:text-white"
-                        : "bg-white text-gray-600 hover:text-[#2A362B]"
-                    }`}
-                  >
-                    {option.label}
-                  </Button>
-                )
-              })}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="h-[40px] shrink-0 rounded-md border-gray-200 text-gray-700"
-                  >
-                    Opções
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 p-2">
-                  {MENU_OPTIONS.map((opcao) => (
-                    <DropdownMenuItem
-                      key={opcao}
-                      onClick={() => setOpcaoSelecionada(opcao)}
-                      className="flex cursor-pointer items-center justify-between rounded-md py-2.5"
-                    >
-                      <span>{opcao}</span>
-                      {opcaoSelecionada === opcao ? (
-                        <Check className="h-4 w-4 text-[#2A362B]" />
-                      ) : null}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 lg:justify-end">
+            <button
+              type="button"
+              onClick={() => handleStatusToggle("hoje")}
+              className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
+                selectedStatus === "hoje"
+                  ? "bg-[#25352C] text-white"
+                  : "bg-[#f7f6f0] text-[#5d675e] hover:bg-[#ece8da]"
+              }`}
+            >
+              {STATUS_LABELS.hoje}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStatusToggle("campo")}
+              className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
+                selectedStatus === "campo"
+                  ? "bg-[#25352C] text-white"
+                  : "bg-[#f7f6f0] text-[#5d675e] hover:bg-[#ece8da]"
+              }`}
+            >
+              {STATUS_LABELS.campo}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStatusToggle("atrasada")}
+              className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
+                selectedStatus === "atrasada"
+                  ? "bg-[#25352C] text-white"
+                  : "bg-[#f7f6f0] text-[#5d675e] hover:bg-[#ece8da]"
+              }`}
+            >
+              {STATUS_LABELS.atrasada}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStatus("todos")
+                setCurrentPage(1)
+              }}
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-[#e6e5dc] px-4 py-2 text-xs font-medium text-[#6b746a] transition-colors hover:border-[#cf9d09] hover:text-[#cf9d09]"
+            >
+              Opcoes
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-gray-100">
-          <Table className="min-w-[1100px]">
-            <TableHeader className="bg-gray-50">
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={
-                      todasVisitasVisiveisSelecionadas
-                        ? true
-                        : algumaVisitaSelecionada
-                          ? "indeterminate"
-                          : false
-                    }
-                    onCheckedChange={handleSelecionarTodas}
-                    className="border-gray-300"
-                    aria-label="Selecionar todas as visitas visíveis"
-                  />
-                </TableHead>
-                {SORTABLE_HEADERS.map((header) => (
-                  <TableHead
-                    key={header}
-                    className="text-[11px] font-medium text-gray-500"
-                  >
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 uppercase"
-                    >
-                      {header}
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </button>
+        <div className="mt-5 overflow-hidden rounded-3xl border border-[#eceae2]">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[980px]">
+              <TableHeader>
+                <TableRow className="border-b border-[#efeee8] bg-[#fbfaf6] hover:bg-[#fbfaf6]">
+                  <TableHead className="w-14">
+                    <Checkbox
+                      checked={allCurrentPageSelected}
+                      onCheckedChange={handleToggleAll}
+                      aria-label="Selecionar promotores"
+                      className="border-[#d4d8ce]"
+                    />
                   </TableHead>
-                ))}
-                <TableHead className="w-[72px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visitasDaPagina.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-40 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 text-gray-500">
-                      <Search className="h-8 w-8 text-gray-300" />
-                      <p className="text-lg font-medium">Nenhuma visita encontrada</p>
-                      <p className="text-sm">
-                        Ajuste os filtros ou tente outra busca.
-                      </p>
-                    </div>
-                  </TableCell>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Promotor
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Rota
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Tarefa
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Data de vínculo
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Identificação
+                  </TableHead>
+                  <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Precisao
+                  </TableHead>
+                  <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wide text-[#8d9689]">
+                    Histórico
+                  </TableHead>
                 </TableRow>
-              ) : (
-                visitasDaPagina.map((visita) => (
-                  <TableRow key={visita.id} className="hover:bg-gray-50/60">
-                    <TableCell>
-                      <Checkbox
-                        checked={visitasSelecionadas.includes(visita.id)}
-                        onCheckedChange={(checked) =>
-                          handleSelecionarVisita(visita.id, checked)
-                        }
-                        className="border-gray-300"
-                        aria-label={`Selecionar visita ${visita.descricao}`}
-                      />
-                    </TableCell>
-                    <TableCell className="max-w-[290px] text-sm font-medium text-gray-700">
-                      <span className="line-clamp-1">{visita.descricao}</span>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {visita.razaoSocial}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {visita.indicadorAlternativo}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {visita.estado}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {visita.municipio}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {visita.bairro}
-                    </TableCell>
-                    <TableCell>{renderPrecision(visita.precisao)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-[#6b6b6b] hover:bg-green-50 hover:text-[#2A362B]"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+
+              <TableBody>
+                {loading ? (
+                  <TableRow className="border-b border-[#f1efe8]">
+                    <TableCell colSpan={9} className="h-40 text-center text-sm text-[#7b847a]">
+                      Carregando promotores...
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : paginatedData.length > 0 ? (
+                  paginatedData.map((visita) => (
+                    <TableRow
+                      key={visita.id}
+                      className="border-b border-[#f1efe8] text-[13px] text-[#657060] transition-colors hover:bg-[#fcfbf7]"
+                    >
+                      <TableCell className="w-14">
+                        <Checkbox
+                          checked={selectedRows.includes(visita.id)}
+                          onCheckedChange={() => handleToggleRow(visita.id)}
+                          aria-label={`Selecionar ${visita.descricao}`}
+                          className="border-[#d4d8ce]"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium text-[#314238]">
+                        <button
+                          type="button"
+                        onClick={() => openVisitHistoryPage(visita)}
+                          className="text-left transition-colors hover:text-[#cf9d09]"
+                        >
+                          {visita.descricao}
+                        </button>
+                      </TableCell>
+                      <TableCell>{visita.razaoSocial}</TableCell>
+                      <TableCell>{visita.indicadorAlternativo}</TableCell>
+                      <TableCell>{visita.estado}</TableCell>
+                      <TableCell>{visita.municipio}</TableCell>
+                      <TableCell>{visita.bairro}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-[#56714f]">
+                          {Array.from({ length: visita.precisao }).map((_, index) => (
+                            <MapPin key={`${visita.id}-${index}`} className="h-4 w-4 fill-current" />
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => openVisitHistoryPage(visita)}
+                          className="h-9 rounded-xl px-3 text-[#5f695e] hover:bg-[#fff7dd] hover:text-[#cf9d09]"
+                        >
+                          <Clock3 className="mr-2 h-4 w-4" />
+                          Ver
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow className="border-b border-[#f1efe8]">
+                    <TableCell colSpan={9} className="h-40 text-center text-sm text-[#7b847a]">
+                      Nenhum promotor encontrado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-        <div className="mt-6 flex justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    if (currentPage > 0) setCurrentPage(currentPage - 1)
-                  }}
-                  className={
-                    currentPage === 0
-                      ? "pointer-events-none h-8 text-gray-300"
-                      : "h-8 text-gray-500 hover:text-[#2A362B]"
-                  }
-                />
-              </PaginationItem>
+          <div className="border-t border-[#efeee8] bg-white px-4 py-4 sm:px-6">
+            <Pagination>
+              <PaginationContent className="gap-1">
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }}
+                    className={`border-none bg-transparent text-[#a4ab9d] hover:bg-transparent hover:text-[#25352C] ${
+                      currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                    }`}
+                  />
+                </PaginationItem>
 
-              {renderPaginationItems()}
+                {Array.from({ length: totalPages }).map((_, index) => {
+                  const page = index + 1
+                  const shouldShow =
+                    page === 1 ||
+                    page === totalPages ||
+                    Math.abs(page - currentPage) <= 1
 
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    if (currentPage < totalPages - 1) {
-                      setCurrentPage(currentPage + 1)
+                  if (!shouldShow) {
+                    if (page === 2 || page === totalPages - 1) {
+                      return (
+                        <PaginationItem key={`ellipsis-${page}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )
                     }
-                  }}
-                  className={
-                    currentPage >= totalPages - 1
-                      ? "pointer-events-none h-8 text-gray-300"
-                      : "h-8 text-gray-700 hover:text-[#2A362B]"
+
+                    return null
                   }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        isActive={page === currentPage}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          setCurrentPage(page)
+                        }}
+                        className={`h-10 w-10 rounded-xl border-none text-sm ${
+                          page === currentPage
+                            ? "bg-[#25352C] font-semibold text-white hover:bg-[#25352C]"
+                            : "text-[#7b8678] hover:bg-[#f2f0e8]"
+                        }`}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }}
+                    className={`border-none bg-transparent text-[#a4ab9d] hover:bg-transparent hover:text-[#25352C] ${
+                      currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                    }`}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       </div>
     </div>

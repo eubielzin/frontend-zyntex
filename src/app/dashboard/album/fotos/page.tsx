@@ -21,7 +21,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -49,6 +48,11 @@ type AlbumPhoto = {
   url?: string
   nomeArquivo?: string
   caminho?: string
+  industria?: string
+  categoria?: string
+  localId?: number
+  localNome?: string
+  dataExecucao?: string
 }
 
 type PhotoGroup = {
@@ -101,6 +105,10 @@ const getPhotoSource = (photo: AlbumPhoto) => {
 }
 
 const getPhotoCompanyName = (photo: AlbumPhoto) => {
+  if (photo.industria?.trim()) {
+    return photo.industria.trim()
+  }
+
   const source = photo.caminho?.trim() || getPhotoSource(photo)
   const [firstSegment] = getPathSegmentsFromSource(source)
 
@@ -108,6 +116,10 @@ const getPhotoCompanyName = (photo: AlbumPhoto) => {
 }
 
 const getPhotoGroupName = (photo: AlbumPhoto) => {
+  if (photo.categoria?.trim()) {
+    return photo.categoria.trim()
+  }
+
   const source = photo.caminho?.trim() || getPhotoSource(photo)
   const [, secondSegment] = getPathSegmentsFromSource(source)
 
@@ -118,12 +130,34 @@ const normalizeCompanyName = (value?: string | null) => {
   return (value || "").trim().toLowerCase()
 }
 
+const normalizeDateValue = (value?: string | null) => {
+  return (value || "").trim()
+}
+
+const buildAlbumPhotosUrl = (albumId: number, dataInicio?: string, dataFim?: string) => {
+  const startDate = normalizeDateValue(dataInicio)
+  const endDate = normalizeDateValue(dataFim)
+
+  if (startDate && endDate) {
+    const params = new URLSearchParams({
+      dataInicio: startDate,
+      dataFim: endDate,
+    })
+
+    return buildApiUrl(`/imagem/tarefa-local/${albumId}/por-data?${params.toString()}`)
+  }
+
+  return buildApiUrl(`/imagem/tarefa-local/${albumId}`)
+}
+
 export default function AlbumFotosPage() {
   const searchParams = useSearchParams()
   const empresa = searchParams.get("empresa") || "Nome da empresa"
   const empresaNormalizada = React.useMemo(() => normalizeCompanyName(empresa), [empresa])
   const albumIdsParam = searchParams.get("albumIds")
   const albumId = searchParams.get("albumId")
+  const dataInicioParam = searchParams.get("dataInicio") || ""
+  const dataFimParam = searchParams.get("dataFim") || ""
   const albumIds = React.useMemo(() => {
     const rawIds = albumIdsParam
       ? albumIdsParam.split(",")
@@ -138,6 +172,8 @@ export default function AlbumFotosPage() {
 
   const [loading, setLoading] = React.useState(true)
   const [termoBusca, setTermoBusca] = React.useState("")
+  const [dataInicio, setDataInicio] = React.useState(dataInicioParam)
+  const [dataFim, setDataFim] = React.useState(dataFimParam)
   const [currentPage, setCurrentPage] = React.useState(0)
   const [checkedItems, setCheckedItems] = React.useState<number[]>([])
   const [fotos, setFotos] = React.useState<AlbumPhoto[]>([])
@@ -176,7 +212,7 @@ export default function AlbumFotosPage() {
 
         const responses = await Promise.all(
           albumIds.map((currentAlbumId) =>
-            fetch(buildApiUrl(`/imagem/tarefa-local/${currentAlbumId}`), {
+            fetch(buildAlbumPhotosUrl(currentAlbumId, dataInicio, dataFim), {
               signal: controller.signal,
             })
           )
@@ -228,7 +264,7 @@ export default function AlbumFotosPage() {
     fetchFotos()
 
     return () => controller.abort()
-  }, [albumIds, empresaNormalizada])
+  }, [albumIds, dataFim, dataInicio, empresaNormalizada])
 
   const fotosFiltradas = React.useMemo(() => {
     const termo = termoBusca.trim().toLowerCase()
@@ -569,16 +605,45 @@ export default function AlbumFotosPage() {
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-52 rounded-xl p-2">
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2.5">
-                  Todas as fotos
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2.5">
-                  Mais recentes
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2.5">
-                  Mais antigas
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-80 rounded-xl p-3">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#7b7b7b]">Data inicial</p>
+                    <Input
+                      type="date"
+                      value={dataInicio}
+                      onChange={(event) => setDataInicio(event.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#7b7b7b]">Data final</p>
+                    <Input
+                      type="date"
+                      value={dataFim}
+                      onChange={(event) => setDataFim(event.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 flex-1"
+                      onClick={() => {
+                        setDataInicio("")
+                        setDataFim("")
+                      }}
+                    >
+                      Limpar
+                    </Button>
+                    <div className="flex h-9 flex-1 items-center justify-center rounded-lg bg-[#2E3D2A] px-3 text-sm font-medium text-white">
+                      Filtro ativo
+                    </div>
+                  </div>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 

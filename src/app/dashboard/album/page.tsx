@@ -16,7 +16,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -55,6 +54,11 @@ type AlbumPhoto = {
   url?: string
   nomeArquivo?: string
   caminho?: string
+  industria?: string
+  categoria?: string
+  localId?: number
+  localNome?: string
+  dataExecucao?: string
 }
 
 type AlbumGroup = {
@@ -77,6 +81,34 @@ const extractCompanyNameFromSource = (source?: string) => {
   const [firstSegment] = pathWithoutQuery.split("/").filter(Boolean)
 
   return firstSegment ? decodeURIComponent(firstSegment) : ""
+}
+
+const normalizeDateValue = (value?: string | null) => {
+  return (value || "").trim()
+}
+
+const buildAlbumPhotosUrl = (albumId: number, dataInicio?: string, dataFim?: string) => {
+  const startDate = normalizeDateValue(dataInicio)
+  const endDate = normalizeDateValue(dataFim)
+
+  if (startDate && endDate) {
+    const params = new URLSearchParams({
+      dataInicio: startDate,
+      dataFim: endDate,
+    })
+
+    return buildApiUrl(`/imagem/tarefa-local/${albumId}/por-data?${params.toString()}`)
+  }
+
+  return buildApiUrl(`/imagem/tarefa-local/${albumId}`)
+}
+
+const getAlbumPhotoCompanyName = (photo: AlbumPhoto) => {
+  if (photo.industria?.trim()) {
+    return photo.industria.trim()
+  }
+
+  return extractCompanyNameFromSource(photo.caminho?.trim() || photo.url?.trim() || "")
 }
 
 const groupAlbumsByCompany = (albums: Array<RawAlbumCompany & { albumIds: number[] }>) => {
@@ -113,24 +145,26 @@ export default function AlbumPage() {
   const [loading, setLoading] = React.useState(true)
   const [loadError, setLoadError] = React.useState<string | null>(null)
   const [termoBusca, setTermoBusca] = React.useState("")
+  const [dataInicio, setDataInicio] = React.useState("")
+  const [dataFim, setDataFim] = React.useState("")
   const [currentPage, setCurrentPage] = React.useState(0)
   const [checkedItems, setCheckedItems] = React.useState<string[]>([])
 
   const getTaskLocalSourceUrl = React.useCallback(() => buildApiUrl("/validade"), [])
-  const getAlbumPhotosUrl = React.useCallback(
-    (albumId: number) => buildApiUrl(`/imagem/tarefa-local/${albumId}`),
-    []
-  )
 
   const enrichAlbumsWithPhotoCount = React.useCallback(
     async (
       taskLocalIds: number[],
+      filters: { dataInicio?: string; dataFim?: string },
       signal?: AbortSignal
     ): Promise<Array<RawAlbumCompany & { albumIds: number[] }>> => {
       const groupedByTaskLocal = await Promise.all(
         taskLocalIds.map(async (taskLocalId) => {
           try {
-            const response = await fetch(getAlbumPhotosUrl(taskLocalId), { signal })
+            const response = await fetch(
+              buildAlbumPhotosUrl(taskLocalId, filters.dataInicio, filters.dataFim),
+              { signal }
+            )
 
             if (!response.ok) {
               throw new Error(`Erro ao buscar fotos do tarefaLocal ${taskLocalId}`)
@@ -144,9 +178,7 @@ export default function AlbumPage() {
             >()
 
             photoList.forEach((photo) => {
-              const companyName = extractCompanyNameFromSource(
-                photo.caminho?.trim() || photo.url?.trim() || ""
-              )
+              const companyName = getAlbumPhotoCompanyName(photo)
 
               if (!companyName) {
                 return
@@ -188,7 +220,7 @@ export default function AlbumPage() {
 
       return groupedByTaskLocal.flat()
     },
-    [getAlbumPhotosUrl]
+    []
   )
 
   const fetchAllAlbums = React.useCallback(
@@ -217,7 +249,11 @@ export default function AlbumPage() {
           return
         }
 
-        const albumsWithPhotoCount = await enrichAlbumsWithPhotoCount(taskLocalIds, signal)
+        const albumsWithPhotoCount = await enrichAlbumsWithPhotoCount(
+          taskLocalIds,
+          { dataInicio, dataFim },
+          signal
+        )
 
         if (signal?.aborted) {
           return
@@ -238,7 +274,7 @@ export default function AlbumPage() {
         }
       }
     },
-    [enrichAlbumsWithPhotoCount, getTaskLocalSourceUrl]
+    [dataFim, dataInicio, enrichAlbumsWithPhotoCount, getTaskLocalSourceUrl]
   )
 
   React.useEffect(() => {
@@ -394,16 +430,45 @@ export default function AlbumPage() {
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-52 rounded-xl p-2">
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2.5">
-                  Todas as empresas
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2.5">
-                  Mais fotografadas
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2.5">
-                  Menos fotografadas
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-80 rounded-xl p-3">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#7b7b7b]">Data inicial</p>
+                    <Input
+                      type="date"
+                      value={dataInicio}
+                      onChange={(event) => setDataInicio(event.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#7b7b7b]">Data final</p>
+                    <Input
+                      type="date"
+                      value={dataFim}
+                      onChange={(event) => setDataFim(event.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 flex-1"
+                      onClick={() => {
+                        setDataInicio("")
+                        setDataFim("")
+                      }}
+                    >
+                      Limpar
+                    </Button>
+                    <div className="flex h-9 flex-1 items-center justify-center rounded-lg bg-[#2E3D2A] px-3 text-sm font-medium text-white">
+                      Filtro ativo
+                    </div>
+                  </div>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -449,7 +514,17 @@ export default function AlbumPage() {
                     {albunsDaPagina.map((album) => {
                       const isChecked = checkedItems.includes(album.id)
                       const albumIdsParam = album.albumIds.join(",")
-                      const empresaParam = encodeURIComponent(album.nomeEmpresa)
+                      const dataQuery = new URLSearchParams()
+                      dataQuery.set("empresa", album.nomeEmpresa)
+                      dataQuery.set("albumIds", albumIdsParam)
+
+                      if (dataInicio) {
+                        dataQuery.set("dataInicio", dataInicio)
+                      }
+
+                      if (dataFim) {
+                        dataQuery.set("dataFim", dataFim)
+                      }
 
                       return (
                         <TableRow
@@ -468,7 +543,7 @@ export default function AlbumPage() {
                           </TableCell>
                           <TableCell className="px-2">
                             <Link
-                              href={`/dashboard/album/fotos?empresa=${empresaParam}&albumIds=${albumIdsParam}`}
+                              href={`/dashboard/album/fotos?${dataQuery.toString()}`}
                               className="truncate text-sm font-medium text-[#4a4a4a] underline-offset-2 hover:text-[#2A362B] hover:underline"
                             >
                               {album.nomeEmpresa}
@@ -485,7 +560,7 @@ export default function AlbumPage() {
                               className="h-8 w-8 text-[#6b6b6b] hover:bg-[#eef3ee] hover:text-[#2A362B]"
                             >
                               <Link
-                                href={`/dashboard/album/fotos?empresa=${empresaParam}&albumIds=${albumIdsParam}`}
+                                href={`/dashboard/album/fotos?${dataQuery.toString()}`}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Link>
