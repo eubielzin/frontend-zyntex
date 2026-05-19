@@ -8,6 +8,7 @@ import { buildApiUrl } from "@/lib/api-url"
 import {
   Camera,
   ChevronDown,
+  ChevronLeft,
   Expand,
   Loader2,
   RefreshCw,
@@ -42,6 +43,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 type AlbumPhoto = {
   id: number
@@ -59,6 +68,13 @@ type PhotoGroup = {
   id: string
   nome: string
   fotos: AlbumPhoto[]
+}
+
+type PhotoLocationGroup = {
+  id: string
+  nome: string
+  fotos: AlbumPhoto[]
+  totalFotos: number
 }
 
 const PAGE_SIZE = 16
@@ -126,6 +142,18 @@ const getPhotoGroupName = (photo: AlbumPhoto) => {
   return secondSegment || "Sem categoria"
 }
 
+const getPhotoLocationName = (photo: AlbumPhoto) => {
+  if (photo.localNome?.trim()) {
+    return photo.localNome.trim()
+  }
+
+  if (typeof photo.localId === "number") {
+    return `Local #${photo.localId}`
+  }
+
+  return "Local nao identificado"
+}
+
 const normalizeCompanyName = (value?: string | null) => {
   return (value || "").trim().toLowerCase()
 }
@@ -176,6 +204,8 @@ export default function AlbumFotosPage() {
   const [dataFim, setDataFim] = React.useState(dataFimParam)
   const [currentPage, setCurrentPage] = React.useState(0)
   const [checkedItems, setCheckedItems] = React.useState<number[]>([])
+  const [checkedLocalGroups, setCheckedLocalGroups] = React.useState<string[]>([])
+  const [selectedLocalGroupId, setSelectedLocalGroupId] = React.useState<string | null>(null)
   const [fotos, setFotos] = React.useState<AlbumPhoto[]>([])
   const [errorMessage, setErrorMessage] = React.useState("")
   const [loadedImages, setLoadedImages] = React.useState<number[]>([])
@@ -244,6 +274,8 @@ export default function AlbumFotosPage() {
         setCurrentPage(0)
         setLoadedImages([])
         setExpandedGroups([])
+        setCheckedLocalGroups([])
+        setSelectedLocalGroupId(null)
       } catch (error) {
         if (controller.signal.aborted) return
 
@@ -266,25 +298,75 @@ export default function AlbumFotosPage() {
     return () => controller.abort()
   }, [albumIds, dataFim, dataInicio, empresaNormalizada])
 
+  const gruposDeLocais = React.useMemo(() => {
+    const groupsMap = new Map<string, PhotoLocationGroup>()
+
+    fotos.forEach((foto) => {
+      const locationName = getPhotoLocationName(foto)
+      const locationKey =
+        typeof foto.localId === "number"
+          ? `local-${foto.localId}`
+          : normalizeCompanyName(locationName) || "local-nao-identificado"
+      const currentGroup = groupsMap.get(locationKey)
+
+      if (!currentGroup) {
+        groupsMap.set(locationKey, {
+          id: locationKey,
+          nome: locationName,
+          fotos: [foto],
+          totalFotos: 1,
+        })
+        return
+      }
+
+      currentGroup.fotos.push(foto)
+      currentGroup.totalFotos += 1
+    })
+
+    return Array.from(groupsMap.values()).sort((firstGroup, secondGroup) =>
+      firstGroup.nome.localeCompare(secondGroup.nome, "pt-BR", {
+        sensitivity: "base",
+      })
+    )
+  }, [fotos])
+
+  const locaisFiltrados = React.useMemo(() => {
+    const termo = termoBusca.trim().toLowerCase()
+
+    if (!termo || selectedLocalGroupId) {
+      return gruposDeLocais
+    }
+
+    return gruposDeLocais.filter((group) => group.nome.toLowerCase().includes(termo))
+  }, [gruposDeLocais, selectedLocalGroupId, termoBusca])
+
+  const selectedLocalGroup = React.useMemo(() => {
+    return gruposDeLocais.find((group) => group.id === selectedLocalGroupId) ?? null
+  }, [gruposDeLocais, selectedLocalGroupId])
+
   const fotosFiltradas = React.useMemo(() => {
     const termo = termoBusca.trim().toLowerCase()
-    if (!termo) return fotos
+    const fotosBase = selectedLocalGroup ? selectedLocalGroup.fotos : fotos
 
-    return fotos.filter((foto) => {
+    if (!termo) return fotosBase
+
+    return fotosBase.filter((foto) => {
       const nomeFoto = getPhotoName(foto).toLowerCase()
       const photoSource = getPhotoSource(foto).toLowerCase()
       const photoPath = foto.caminho?.toLowerCase() || ""
       const photoGroupName = getPhotoGroupName(foto).toLowerCase()
+      const photoLocationName = getPhotoLocationName(foto).toLowerCase()
 
       return (
         nomeFoto.includes(termo) ||
         photoGroupName.includes(termo) ||
+        photoLocationName.includes(termo) ||
         photoSource.includes(termo) ||
         photoPath.includes(termo) ||
         String(foto.id).includes(termo)
       )
     })
-  }, [fotos, termoBusca])
+  }, [fotos, selectedLocalGroup, termoBusca])
 
   const gruposDeFotos = React.useMemo(() => {
     const groupsMap = new Map<string, PhotoGroup>()
@@ -313,8 +395,8 @@ export default function AlbumFotosPage() {
     )
   }, [fotosFiltradas])
 
-  const totalElements = fotosFiltradas.length
-  const totalGroups = gruposDeFotos.length
+  const totalElements = selectedLocalGroup ? fotosFiltradas.length : fotos.length
+  const totalGroups = selectedLocalGroup ? gruposDeFotos.length : locaisFiltrados.length
   const totalPages = Math.max(1, Math.ceil(totalGroups / PAGE_SIZE))
 
   React.useEffect(() => {
@@ -344,6 +426,12 @@ export default function AlbumFotosPage() {
     return gruposDeFotos.slice(start, end)
   }, [currentPage, gruposDeFotos])
 
+  const locaisDaPagina = React.useMemo(() => {
+    const start = currentPage * PAGE_SIZE
+    const end = start + PAGE_SIZE
+    return locaisFiltrados.slice(start, end)
+  }, [currentPage, locaisFiltrados])
+
   const selectedPhotoId = checkedItems[0] ?? null
 
   const allVisibleChecked =
@@ -355,6 +443,42 @@ export default function AlbumFotosPage() {
     if (!checked) {
       setCheckedItems([])
     }
+  }
+
+  const allVisibleLocationsChecked =
+    locaisDaPagina.length > 0 &&
+    locaisDaPagina.every((group) => checkedLocalGroups.includes(group.id))
+
+  const toggleAllVisibleLocations = (checked: boolean) => {
+    const visibleIds = locaisDaPagina.map((group) => group.id)
+
+    setCheckedLocalGroups((prev) =>
+      checked
+        ? [...new Set([...prev, ...visibleIds])]
+        : prev.filter((id) => !visibleIds.includes(id))
+    )
+  }
+
+  const toggleLocalGroup = (groupId: string, checked: boolean) => {
+    setCheckedLocalGroups((prev) =>
+      checked ? [...new Set([...prev, groupId])] : prev.filter((id) => id !== groupId)
+    )
+  }
+
+  const openLocalGroup = (groupId: string) => {
+    setSelectedLocalGroupId(groupId)
+    setTermoBusca("")
+    setCurrentPage(0)
+    setCheckedItems([])
+    setExpandedGroups([])
+  }
+
+  const closeLocalGroup = () => {
+    setSelectedLocalGroupId(null)
+    setTermoBusca("")
+    setCurrentPage(0)
+    setCheckedItems([])
+    setExpandedGroups([])
   }
 
   const toggleItem = (fotoId: number, checked: boolean) => {
@@ -561,7 +685,11 @@ export default function AlbumFotosPage() {
           Book de fotos
         </h1>
         <Badge className="w-fit rounded-full bg-[#d7ead8] px-3 py-1 text-xs font-medium text-[#638063] hover:bg-[#d7ead8]">
-          {loading ? "Carregando..." : `${totalGroups} grupos / ${totalElements} fotos`}
+          {loading
+            ? "Carregando..."
+            : selectedLocalGroup
+              ? `${totalGroups} grupos / ${totalElements} fotos`
+              : `${locaisFiltrados.length} registros`}
         </Badge>
       </div>
 
@@ -571,7 +699,9 @@ export default function AlbumFotosPage() {
             <div className="flex w-full max-w-[420px] items-center overflow-hidden rounded-xl border border-[#ececec] bg-white">
               <Input
                 type="search"
-                placeholder="Buscar..."
+                placeholder={
+                  selectedLocalGroup ? "Buscar..." : "Buscar pelo nome do local..."
+                }
                 value={termoBusca}
                 onChange={(event) => setTermoBusca(event.target.value)}
                 className="h-11 border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
@@ -647,6 +777,18 @@ export default function AlbumFotosPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {selectedLocalGroup ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeLocalGroup}
+                className="h-[45px] border-[#dcdcdc] text-[#2A362B]"
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Voltar aos locais
+              </Button>
+            ) : null}
+
             {/* <Button className="bg-[#2E3D2A] h-[45px] hover:bg-[#1f2920] text-white gap-2">
               <Plus className="mr-2 h-4 w-4" />
               Adicionar foto
@@ -655,21 +797,23 @@ export default function AlbumFotosPage() {
         </div>
 
         <div className="rounded-2xl border border-[#f0f0f0] bg-[#fafafa]">
-          <div className="flex items-center gap-3 border-b border-[#efefef] px-4 py-3 text-xs text-[#7a7a7a]">
-            <Checkbox
-              checked={allVisibleChecked}
-              onCheckedChange={(checked) => toggleAllVisible(Boolean(checked))}
-              disabled
-              className="border-[#d7d7d7]"
-            />
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 font-medium text-[#7b7b7b]"
-            >
-              Fotos
-              <ChevronDown className="h-3.5 w-3.5 rotate-180" />
-            </button>
-          </div>
+          {selectedLocalGroup ? (
+            <div className="flex items-center gap-3 border-b border-[#efefef] px-4 py-3 text-xs text-[#7a7a7a]">
+              <Checkbox
+                checked={allVisibleChecked}
+                onCheckedChange={(checked) => toggleAllVisible(Boolean(checked))}
+                disabled
+                className="border-[#d7d7d7]"
+              />
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 font-medium text-[#7b7b7b]"
+              >
+                Fotos
+                <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+              </button>
+            </div>
+          ) : null}
 
           <div className="p-3 md:p-4">
             {loading ? (
@@ -688,7 +832,8 @@ export default function AlbumFotosPage() {
                   <p className="text-sm text-gray-500">{errorMessage}</p>
                 </div>
               </div>
-            ) : gruposDaPagina.length > 0 ? (
+            ) : selectedLocalGroup ? (
+              gruposDaPagina.length > 0 ? (
               <div className="space-y-4">
                 {gruposDaPagina.map((group) => {
                   const isExpanded = expandedGroups.includes(group.id)
@@ -860,6 +1005,108 @@ export default function AlbumFotosPage() {
                   </p>
                   <p className="text-sm text-gray-500">
                     Ajuste a busca para visualizar outras imagens.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setTermoBusca("")}
+                  className="border-[#dcdcdc] text-[#2A362B]"
+                >
+                  Limpar busca
+                </Button>
+              </div>
+              )
+            ) : locaisDaPagina.length > 0 ? (
+              <div className="overflow-hidden rounded-xl bg-white">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-[#efefef] bg-[#fafafa] hover:bg-[#fafafa]">
+                      <TableHead className="w-12 pl-3">
+                        <Checkbox
+                          checked={allVisibleLocationsChecked}
+                          onCheckedChange={(checked) =>
+                            toggleAllVisibleLocations(Boolean(checked))
+                          }
+                          className="border-[#d7d7d7]"
+                        />
+                      </TableHead>
+                      <TableHead className="h-12 px-2 text-xs font-medium text-[#7b7b7b]">
+                        <button type="button" className="inline-flex items-center gap-1">
+                          Local
+                          <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="h-12 px-2 text-right text-xs font-medium text-[#7b7b7b]">
+                        <button type="button" className="inline-flex items-center gap-1">
+                          Quantidade de Fotos
+                          <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="h-12 w-14 pr-3 text-right text-xs font-medium text-[#7b7b7b]">
+                        Ações
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {locaisDaPagina.map((group) => {
+                      const isChecked = checkedLocalGroups.includes(group.id)
+
+                      return (
+                        <TableRow
+                          key={group.id}
+                          className="border-b border-[#f1f1f1] bg-white hover:bg-[#fbfcfb]"
+                          data-state={isChecked ? "selected" : undefined}
+                        >
+                          <TableCell className="pl-3">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={(checked) =>
+                                toggleLocalGroup(group.id, Boolean(checked))
+                              }
+                              className="border-[#d7d7d7]"
+                            />
+                          </TableCell>
+                          <TableCell className="px-2">
+                            <button
+                              type="button"
+                              onClick={() => openLocalGroup(group.id)}
+                              className="truncate text-left text-sm font-medium text-[#4a4a4a] underline-offset-2 hover:text-[#2A362B] hover:underline"
+                            >
+                              {group.nome}
+                            </button>
+                          </TableCell>
+                          <TableCell className="px-2 text-right text-sm text-[#6a6a6a]">
+                            {group.totalFotos}
+                          </TableCell>
+                          <TableCell className="pr-3 text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openLocalGroup(group.id)}
+                              className="h-8 w-8 text-[#6b6b6b] hover:bg-[#eef3ee] hover:text-[#2A362B]"
+                            >
+                              <Expand className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl bg-white px-6 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eef3ee] text-[#2E3D2A]">
+                  <Camera className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-[#2A362B]">
+                    Nenhum local encontrado
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Ajuste a busca para visualizar outros locais.
                   </p>
                 </div>
                 <Button
