@@ -43,8 +43,24 @@ export interface PromotorVisitaApiResponse {
   cidade?: string
   ultima_localizacao?: string
   ultimaLocalizacao?: string
-  latitude?: number
-  longitude?: number
+  latitude?: number | string | null
+  longitude?: number | string | null
+  coordenadaGPS?: {
+    latitude?: number | string | null
+    longitude?: number | string | null
+  } | null
+  coordenadaGps?: {
+    latitude?: number | string | null
+    longitude?: number | string | null
+  } | null
+  coordenada?: {
+    latitude?: number | string | null
+    longitude?: number | string | null
+  } | null
+  coordenadas?: {
+    latitude?: number | string | null
+    longitude?: number | string | null
+  } | null
 }
 
 export interface PromotorRotaApiResponse {
@@ -78,6 +94,11 @@ export const TIMELINE_POINT_STYLES: Record<VisitTimelineStatus, string> = {
   concluida: "bg-[#cf9d09]",
 }
 
+const MOCK_COORDINATE_CENTER = {
+  latitude: -3.7319,
+  longitude: -38.5267,
+}
+
 function isValidDate(value?: string) {
   if (!value) {
     return false
@@ -100,6 +121,49 @@ function getDaysDifference(target: Date) {
 
 export function getPromotorLastLocation(promotor: PromotorVisitaApiResponse) {
   return promotor.ultima_localizacao || promotor.ultimaLocalizacao || ""
+}
+
+function normalizeCoordinate(value?: number | string | null) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined
+  }
+
+  if (typeof value === "string") {
+    const normalizedValue = Number(value.replace(",", "."))
+    return Number.isFinite(normalizedValue) ? normalizedValue : undefined
+  }
+
+  return undefined
+}
+
+function getPromotorLatitude(promotor: PromotorVisitaApiResponse) {
+  return normalizeCoordinate(
+    promotor.latitude ??
+      promotor.coordenadaGPS?.latitude ??
+      promotor.coordenadaGps?.latitude ??
+      promotor.coordenada?.latitude ??
+      promotor.coordenadas?.latitude
+  )
+}
+
+function getPromotorLongitude(promotor: PromotorVisitaApiResponse) {
+  return normalizeCoordinate(
+    promotor.longitude ??
+      promotor.coordenadaGPS?.longitude ??
+      promotor.coordenadaGps?.longitude ??
+      promotor.coordenada?.longitude ??
+      promotor.coordenadas?.longitude
+  )
+}
+
+function getMockedPromotorCoordinates(promotorId: number) {
+  const angle = (promotorId % 24) * 15 * (Math.PI / 180)
+  const radius = 0.02 + (promotorId % 5) * 0.008
+
+  return {
+    latitude: MOCK_COORDINATE_CENTER.latitude + Math.sin(angle) * radius,
+    longitude: MOCK_COORDINATE_CENTER.longitude + Math.cos(angle) * radius,
+  }
 }
 
 function buildVisitStatusFromLocation(lastLocation?: string): VisitStatus {
@@ -172,6 +236,11 @@ function buildHistoryFromPromotor(promotor: PromotorVisitaApiResponse): VisitTim
 
   const localParts = [promotor.cidade?.trim(), promotor.estado?.trim()].filter(Boolean)
   const local = localParts.length > 0 ? localParts.join(" - ") : "Localização informada pelo sistema"
+  const latitudeFromApi = getPromotorLatitude(promotor)
+  const longitudeFromApi = getPromotorLongitude(promotor)
+  const mockedCoordinates = getMockedPromotorCoordinates(promotor.id)
+  const latitude = latitudeFromApi ?? mockedCoordinates.latitude
+  const longitude = longitudeFromApi ?? mockedCoordinates.longitude
 
   return [
     {
@@ -183,10 +252,8 @@ function buildHistoryFromPromotor(promotor: PromotorVisitaApiResponse): VisitTim
         "Última atualização de localização recebida para este promotor no sistema.",
       local,
       status: buildTimelineStatusFromLocation(lastLocation),
-      latitude:
-        typeof promotor.latitude === "number" ? promotor.latitude : undefined,
-      longitude:
-        typeof promotor.longitude === "number" ? promotor.longitude : undefined,
+      latitude,
+      longitude,
     },
   ]
 }

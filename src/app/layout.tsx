@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Montserrat } from "next/font/google"; 
 
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
+import { AppAlerts } from "@/components/feedback/app-alerts";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${montserrat.variable} ${kamerik.variable} font-sans antialiased`}>
         <AuthBootstrap />
+        <AppAlerts />
         {children}
       </body>
     </html>

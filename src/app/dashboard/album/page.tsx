@@ -56,6 +56,7 @@ type AlbumPhoto = {
   caminho?: string
   industria?: string
   categoria?: string
+  quantidade?: number
   localId?: number
   localNome?: string
   dataExecucao?: string
@@ -69,6 +70,7 @@ type AlbumGroup = {
 }
 
 const PAGE_SIZE = 16
+const albumGroupsCache = new Map<string, Promise<AlbumGroup[]>>()
 
 const extractCompanyNameFromSource = (source?: string) => {
   const sanitizedSource = (source || "").trim().replace(/^https?:\/\//i, "")
@@ -155,15 +157,13 @@ export default function AlbumPage() {
   const enrichAlbumsWithPhotoCount = React.useCallback(
     async (
       taskLocalIds: number[],
-      filters: { dataInicio?: string; dataFim?: string },
-      signal?: AbortSignal
+      filters: { dataInicio?: string; dataFim?: string }
     ): Promise<Array<RawAlbumCompany & { albumIds: number[] }>> => {
       const groupedByTaskLocal = await Promise.all(
         taskLocalIds.map(async (taskLocalId) => {
           try {
             const response = await fetch(
-              buildAlbumPhotosUrl(taskLocalId, filters.dataInicio, filters.dataFim),
-              { signal }
+              buildAlbumPhotosUrl(taskLocalId, filters.dataInicio, filters.dataFim)
             )
 
             if (!response.ok) {
@@ -174,7 +174,7 @@ export default function AlbumPage() {
             const photoList = Array.isArray(data) ? data : []
             const photoCountByCompany = new Map<
               string,
-              { displayName: string; quantidadeFotos: number }
+              { displayName: string; photoIds: Set<number>; quantidadeFotos?: number }
             >()
 
             photoList.forEach((photo) => {
@@ -186,10 +186,17 @@ export default function AlbumPage() {
 
               const companyKey = companyName.toLowerCase()
               const currentEntry = photoCountByCompany.get(companyKey)
+              const photoIds = currentEntry?.photoIds ?? new Set<number>()
+
+              photoIds.add(photo.id)
 
               photoCountByCompany.set(companyKey, {
                 displayName: currentEntry?.displayName || companyName,
-                quantidadeFotos: (currentEntry?.quantidadeFotos || 0) + 1,
+                photoIds,
+                quantidadeFotos:
+                  typeof photo.quantidade === "number" && Number.isFinite(photo.quantidade)
+                    ? photo.quantidade
+                    : currentEntry?.quantidadeFotos,
               })
             })
 
@@ -198,20 +205,16 @@ export default function AlbumPage() {
             }
 
             return Array.from(photoCountByCompany.values()).map(
-              ({ displayName, quantidadeFotos }) => {
+              ({ displayName, photoIds, quantidadeFotos }) => {
                 return {
                   id: taskLocalId,
                   nomeEmpresa: displayName || `Album ${taskLocalId}`,
-                  quantidadeFotos,
+                  quantidadeFotos: quantidadeFotos ?? photoIds.size,
                   albumIds: [taskLocalId],
                 }
               }
             )
           } catch (error) {
-            if (signal?.aborted) {
-              throw error
-            }
-
             console.error(`Erro ao enriquecer o tarefaLocal ${taskLocalId}:`, error)
             return []
           }
@@ -223,13 +226,20 @@ export default function AlbumPage() {
     []
   )
 
-  const fetchAllAlbums = React.useCallback(
-    async (signal?: AbortSignal) => {
-      try {
-        setLoading(true)
-        setLoadError(null)
+  const loadAlbumGroups = React.useCallback(
+    async () => {
+      const cacheKey = JSON.stringify({
+        dataInicio: normalizeDateValue(dataInicio),
+        dataFim: normalizeDateValue(dataFim),
+      })
+      const cachedRequest = albumGroupsCache.get(cacheKey)
 
-        const sourceResponse = await fetch(getTaskLocalSourceUrl(), { signal })
+      if (cachedRequest) {
+        return cachedRequest
+      }
+
+      const request = (async () => {
+        const sourceResponse = await fetch(getTaskLocalSourceUrl())
 
         if (!sourceResponse.ok) {
           throw new Error(`Erro ao buscar fontes do album: ${sourceResponse.status}`)
@@ -245,23 +255,45 @@ export default function AlbumPage() {
         )
 
         if (taskLocalIds.length === 0) {
-          setAlbuns([])
-          return
+          return []
         }
 
         const albumsWithPhotoCount = await enrichAlbumsWithPhotoCount(
           taskLocalIds,
-          { dataInicio, dataFim },
-          signal
+          { dataInicio, dataFim }
         )
 
-        if (signal?.aborted) {
+        return groupAlbumsByCompany(albumsWithPhotoCount)
+      })()
+
+      albumGroupsCache.set(cacheKey, request)
+
+      request.catch(() => {
+        albumGroupsCache.delete(cacheKey)
+      })
+
+      return request
+    },
+    [dataFim, dataInicio, enrichAlbumsWithPhotoCount, getTaskLocalSourceUrl]
+  )
+
+  React.useEffect(() => {
+    let ignore = false
+
+    const fetchAllAlbums = async () => {
+      try {
+        setLoading(true)
+        setLoadError(null)
+
+        const groups = await loadAlbumGroups()
+
+        if (ignore) {
           return
         }
 
-        setAlbuns(groupAlbumsByCompany(albumsWithPhotoCount))
+        setAlbuns(groups)
       } catch (error) {
-        if (signal?.aborted) {
+        if (ignore) {
           return
         }
 
@@ -269,21 +301,18 @@ export default function AlbumPage() {
         setAlbuns([])
         setLoadError("Nao foi possivel carregar o book de fotos com os dados reais.")
       } finally {
-        if (!signal?.aborted) {
+        if (!ignore) {
           setLoading(false)
         }
       }
-    },
-    [dataFim, dataInicio, enrichAlbumsWithPhotoCount, getTaskLocalSourceUrl]
-  )
+    }
 
-  React.useEffect(() => {
-    const controller = new AbortController()
+    fetchAllAlbums()
 
-    fetchAllAlbums(controller.signal)
-
-    return () => controller.abort()
-  }, [fetchAllAlbums])
+    return () => {
+      ignore = true
+    }
+  }, [loadAlbumGroups])
 
   const albunsFiltrados = React.useMemo(() => {
     const normalizedTerm = termoBusca.trim().toLowerCase()
