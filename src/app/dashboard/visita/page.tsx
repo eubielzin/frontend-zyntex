@@ -152,6 +152,10 @@ export default function VisitaPage() {
       status: visit.status,
     })
 
+    if (typeof visit.rotaId === "number") {
+      params.set("rotaId", String(visit.rotaId))
+    }
+
     router.push(`/dashboard/visita/visitaView?${params.toString()}`)
   }
 

@@ -11,6 +11,10 @@ export interface VisitTimelineEvent {
   status: VisitTimelineStatus
   latitude?: number
   longitude?: number
+  foraDoRaio?: boolean
+  distanciaMetros?: number
+  tarefaId?: number
+  rotaId?: number
 }
 
 export interface Visit {
@@ -18,7 +22,9 @@ export interface Visit {
   promotorId: number
   descricao: string
   razaoSocial: string
+  supervisorNome: string
   indicadorAlternativo: string
+  rotaId?: number
   estado: string
   municipio: string
   bairro: string
@@ -41,6 +47,18 @@ export interface PromotorVisitaApiResponse {
   cep?: string
   estado?: string
   cidade?: string
+  bairro?: string
+  endereco?: {
+    cep?: string | null
+    estado?: string | null
+    cidade?: string | null
+    bairro?: string | null
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    referencia?: string | null
+    tipoLogradouro?: string | null
+  } | null
   ultima_localizacao?: string
   ultimaLocalizacao?: string
   latitude?: number | string | null
@@ -68,6 +86,9 @@ export interface PromotorRotaApiResponse {
   ativo?: boolean
   dataVinculo?: string
   promotorId: number
+  estado?: string
+  cidade?: string
+  supervisorNome?: string
   nomePromotor?: string
   rotaId?: number
   descricaoRota?: string
@@ -92,11 +113,6 @@ export const TIMELINE_POINT_STYLES: Record<VisitTimelineStatus, string> = {
   rota: "bg-sky-500",
   pausa: "bg-amber-500",
   concluida: "bg-[#cf9d09]",
-}
-
-const MOCK_COORDINATE_CENTER = {
-  latitude: -3.7319,
-  longitude: -38.5267,
 }
 
 function isValidDate(value?: string) {
@@ -136,6 +152,23 @@ function normalizeCoordinate(value?: number | string | null) {
   return undefined
 }
 
+function normalizeText(value?: string | null) {
+  const normalizedValue = value?.trim()
+  return normalizedValue && normalizedValue !== "-" ? normalizedValue : undefined
+}
+
+function getPromotorEstado(promotor: PromotorVisitaApiResponse) {
+  return normalizeText(promotor.estado) ?? normalizeText(promotor.endereco?.estado)
+}
+
+function getPromotorCidade(promotor: PromotorVisitaApiResponse) {
+  return normalizeText(promotor.cidade) ?? normalizeText(promotor.endereco?.cidade)
+}
+
+function getPromotorBairro(promotor: PromotorVisitaApiResponse) {
+  return normalizeText(promotor.bairro) ?? normalizeText(promotor.endereco?.bairro)
+}
+
 function getPromotorLatitude(promotor: PromotorVisitaApiResponse) {
   return normalizeCoordinate(
     promotor.latitude ??
@@ -154,16 +187,6 @@ function getPromotorLongitude(promotor: PromotorVisitaApiResponse) {
       promotor.coordenada?.longitude ??
       promotor.coordenadas?.longitude
   )
-}
-
-function getMockedPromotorCoordinates(promotorId: number) {
-  const angle = (promotorId % 24) * 15 * (Math.PI / 180)
-  const radius = 0.02 + (promotorId % 5) * 0.008
-
-  return {
-    latitude: MOCK_COORDINATE_CENTER.latitude + Math.sin(angle) * radius,
-    longitude: MOCK_COORDINATE_CENTER.longitude + Math.cos(angle) * radius,
-  }
 }
 
 function buildVisitStatusFromLocation(lastLocation?: string): VisitStatus {
@@ -234,13 +257,13 @@ function buildHistoryFromPromotor(promotor: PromotorVisitaApiResponse): VisitTim
     minute: "2-digit",
   }).format(parsed)
 
-  const localParts = [promotor.cidade?.trim(), promotor.estado?.trim()].filter(Boolean)
+  const localParts = [
+    getPromotorCidade(promotor),
+    getPromotorEstado(promotor),
+  ].filter(Boolean)
   const local = localParts.length > 0 ? localParts.join(" - ") : "Localização informada pelo sistema"
-  const latitudeFromApi = getPromotorLatitude(promotor)
-  const longitudeFromApi = getPromotorLongitude(promotor)
-  const mockedCoordinates = getMockedPromotorCoordinates(promotor.id)
-  const latitude = latitudeFromApi ?? mockedCoordinates.latitude
-  const longitude = longitudeFromApi ?? mockedCoordinates.longitude
+  const latitude = getPromotorLatitude(promotor)
+  const longitude = getPromotorLongitude(promotor)
 
   return [
     {
@@ -260,6 +283,9 @@ function buildHistoryFromPromotor(promotor: PromotorVisitaApiResponse): VisitTim
 
 export function mapPromotorToVisit(promotor: PromotorVisitaApiResponse): Visit {
   const lastLocation = getPromotorLastLocation(promotor)
+  const cidade = getPromotorCidade(promotor)
+  const estado = getPromotorEstado(promotor)
+  const bairro = getPromotorBairro(promotor)
 
   return {
     id: promotor.id,
@@ -267,9 +293,10 @@ export function mapPromotorToVisit(promotor: PromotorVisitaApiResponse): Visit {
     descricao: promotor.nome || `Promotor ${promotor.id}`,
     razaoSocial: promotor.nomeSupervisor || "-",
     indicadorAlternativo: promotor.telefone || promotor.sexo || "-",
-    estado: promotor.estado || "-",
-    municipio: promotor.cidade || "-",
-    bairro: promotor.cep || "-",
+    estado: estado || "-",
+    supervisorNome: promotor.nomeSupervisor || "-",
+    municipio: cidade || "-",
+    bairro: bairro || promotor.cep || promotor.endereco?.cep || "-",
     precisao: buildPrecisionFromLocation(lastLocation),
     status: buildVisitStatusFromLocation(lastLocation),
     historico: buildHistoryFromPromotor(promotor),
@@ -328,6 +355,8 @@ export function mapPromotorRotaToVisit(vinculo: PromotorRotaApiResponse): Visit 
     razaoSocial: vinculo.descricaoRota || "-",
     indicadorAlternativo: vinculo.nomeTarefa || "-",
     estado: vinculo.ativo ? "Ativo" : "Inativo",
+    rotaId: vinculo.rotaId,
+    supervisorNome: vinculo.supervisorNome || "-",
     municipio: formatarDataVinculo(vinculo.dataVinculo),
     bairro: vinculo.rotaId ? `Rota #${vinculo.rotaId}` : "-",
     precisao: buildPrecisionFromVinculo(vinculo.dataVinculo, vinculo.ativo),
