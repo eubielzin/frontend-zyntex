@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 import { fetchCepData } from "@/lib/cep"
+import { LocalCoordinateMap } from "@/components/local-coordinate-map"
 
 export default function NovoLocalPage() {
   const router = useRouter();
@@ -55,8 +56,8 @@ export default function NovoLocalPage() {
       referencia: ""
     },
     coordenadaGPS: {
-      latitude: 0,
-      longitude: 0
+      latitude: "",
+      longitude: ""
     }
   });
 
@@ -99,8 +100,8 @@ export default function NovoLocalPage() {
             estado: data.estado || prev.endereco.estado
           },
           coordenadaGPS: {
-            latitude: data.latitude ? Number(data.latitude) : prev.coordenadaGPS.latitude,
-            longitude: data.longitude ? Number(data.longitude) : prev.coordenadaGPS.longitude
+            latitude: data.latitude || prev.coordenadaGPS.latitude,
+            longitude: data.longitude || prev.coordenadaGPS.longitude
           }
         }));
       }
@@ -132,6 +133,16 @@ export default function NovoLocalPage() {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleCoordinateChange = (coordinates: { latitude: number; longitude: number }) => {
+    setFormData(prev => ({
+      ...prev,
+      coordenadaGPS: {
+        latitude: String(coordinates.latitude),
+        longitude: String(coordinates.longitude)
+      }
+    }));
   };
 
   const handleSave = async () => {
@@ -362,6 +373,14 @@ export default function NovoLocalPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
                         <div className="space-y-2"><Label className="text-[13px] disabled font-medium text-gray-700">Latitude GPS</Label><Input name="coordenadaGPS.latitude" type="number" disabled step="any" value={formData.coordenadaGPS.latitude} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input name="coordenadaGPS.longitude" type="number" step="any" disabled value={formData.coordenadaGPS.longitude} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                        <LocalCoordinateMap
+                          latitude={formData.coordenadaGPS.latitude}
+                          longitude={formData.coordenadaGPS.longitude}
+                          onChange={handleCoordinateChange}
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">

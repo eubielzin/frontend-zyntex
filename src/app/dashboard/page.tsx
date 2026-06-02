@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import Link from 'next/link'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Cell, PieChart, Pie
@@ -9,6 +10,23 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { StatCard } from "../../components/layout/stat-card"
 import { Funnel } from 'lucide-react'
+import { buildApiUrl } from '@/lib/api-url'
+
+type DashboardStatusResponse = {
+  status?: string
+  nome?: string
+  quantidade?: number
+  total?: number
+}
+
+type DashboardInicialResponse = {
+  visitasConcluidas?: number
+  promotoresEmCampo?: number
+  visitasEmExecucao?: number
+  visitasJustificadas?: number
+  percentualPdvsAtendidos?: number
+  distribuicaoStatus?: DashboardStatusResponse[]
+}
 
 // --- DADOS PARA OS GRÁFICOS ---
 const salesData = [
@@ -42,27 +60,118 @@ const userRanking = [
   { name: 'User Name', value: '', trend: '+1,7%', color: '#A3C4A6' },
 ];
 
-// Dados para os anéis concêntricos (Target)
-const targetRings = [
-  { name: 'A', value: 100, fill: '#5E8B61' },
-  { name: 'B', value: 80, fill: '#7DA47F' },
-  { name: 'C', value: 60, fill: '#A3C4A6' },
-];
+const statusColors = ['#5E8B61', '#7DA47F', '#A3C4A6', '#cf9d09', '#cbd5c9']
 
-// Dados para o anel percentual (atendidos / restantes)
-const radialData = [
-  { name: 'Atendidos', value: 67, fill: '#5E8B61' },
-  { name: 'Restantes', value: 33, fill: '#E6E6E6' },
-];
+function normalizePercent(value?: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+function getStatusLabel(status?: string) {
+  if (!status) {
+    return 'Sem status'
+  }
+
+  return status
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
+}
+
+function getTodayInputValue() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function buildDashboardUrl(endpoint: string, data: string) {
+  const params = new URLSearchParams()
+
+  if (data) {
+    params.set('data', data)
+  }
+
+  const query = params.toString()
+  return buildApiUrl(query ? `${endpoint}?${query}` : endpoint)
+}
 
 export default function DashboardPage() {
+  const [dashboard, setDashboard] = React.useState<DashboardInicialResponse | null>(null)
+  const [loadingDashboard, setLoadingDashboard] = React.useState(true)
+  const [dashboardDate, setDashboardDate] = React.useState(getTodayInputValue)
+
+  React.useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadDashboard() {
+      try {
+        setLoadingDashboard(true)
+
+        const response = await fetch(buildDashboardUrl('/dashboard/inicial', dashboardDate), {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error('Não foi possível carregar o dashboard inicial.')
+        }
+
+        setDashboard(await response.json())
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return
+        }
+
+        console.error('Erro ao carregar dashboard inicial:', error)
+        setDashboard(null)
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadingDashboard(false)
+        }
+      }
+    }
+
+    loadDashboard()
+
+    return () => controller.abort()
+  }, [dashboardDate])
+
+  const percentualPdvsAtendidos = normalizePercent(dashboard?.percentualPdvsAtendidos)
+  const radialData = [
+    { name: 'Atendidos', value: percentualPdvsAtendidos, fill: '#5E8B61' },
+    { name: 'Restantes', value: Math.max(100 - percentualPdvsAtendidos, 0), fill: '#E6E6E6' },
+  ]
+  const statusData =
+    dashboard?.distribuicaoStatus?.map((item, index) => ({
+      name: getStatusLabel(item.status || item.nome),
+      value: item.quantidade ?? item.total ?? 0,
+      color: statusColors[index % statusColors.length],
+      fill: statusColors[index % statusColors.length],
+    })).filter((item) => item.value > 0) ?? []
+  const displayStatusData =
+    statusData.length > 0 ? statusData : [{ name: 'Sem dados', value: 1, fill: '#E6E6E6' }]
+  const formatStatValue = (value?: number) => loadingDashboard ? '...' : value ?? 0
+
   return (
     <section className="space-y-6 p-6 bg-[#F3F5F6] min-h-screen">
       <div className="flex items-start justify-between">
         <h1 className="text-3xl font-bold text-[#2A362B] tracking-tight">Painel de Gestão</h1>
-        <Button variant="ghost" className="h-[38px] px-3 flex items-center gap-2 text-gray-700">
-          <Funnel className="h-4 w-4" /> Filtrar
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={dashboardDate}
+            onChange={(event) => setDashboardDate(event.target.value)}
+            className="h-[38px] rounded-xl border border-[#e4e6db] bg-white px-3 text-sm font-medium text-[#25352C] shadow-sm outline-none focus:border-[#cf9d09]"
+          />
+          <Button variant="ghost" className="h-[38px] px-3 flex items-center gap-2 text-gray-700">
+            <Funnel className="h-4 w-4" /> Filtrar
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="geral" className="space-y-6">
@@ -70,10 +179,18 @@ export default function DashboardPage() {
 
           {/* Small stat cards row */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <StatCard title="Visitas concluídas" value="76" trend="+2,5%" />
-            <StatCard title="Promotores em campo" value="15" trend="+11%" />
-            <StatCard title="Visitas em execução" value="154" trend="" />
-            <StatCard title="Visitas justificadas" value="---" trend="" />
+            <Link href={`/dashboard/visitas-concluidas?data=${dashboardDate}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#cf9d09] focus-visible:ring-offset-2">
+              <div className="transition-transform hover:-translate-y-0.5">
+                <StatCard
+                  title="Visitas concluídas"
+                  value={formatStatValue(dashboard?.visitasConcluidas)}
+                  trend={`${percentualPdvsAtendidos}%`}
+                />
+              </div>
+            </Link>
+            <StatCard title="Promotores em campo" value={formatStatValue(dashboard?.promotoresEmCampo)} />
+            <StatCard title="Visitas em execução" value={formatStatValue(dashboard?.visitasEmExecucao)} />
+            <StatCard title="Visitas justificadas" value={formatStatValue(dashboard?.visitasJustificadas)} />
           </div>
 
           {/* Two large cards row: left = percentual (radial), right = pie + legend */}
@@ -81,8 +198,14 @@ export default function DashboardPage() {
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <h3 className="font-bold text-gray-700 mb-4">Percentual de PDVs atendidos</h3>
               <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-full md:w-1/2 h-[200px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height={200}>
+                <div className="flex h-[200px] min-w-0 w-full items-center justify-center md:w-1/2">
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                    minWidth={0}
+                    minHeight={200}
+                    initialDimension={{ width: 320, height: 200 }}
+                  >
                     <PieChart>
                       <Pie data={radialData} dataKey="value" startAngle={90} endAngle={-270} innerRadius={60} outerRadius={80} stroke="none">
                         {radialData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
@@ -91,26 +214,32 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="w-full md:w-1/2">
-                  <div className="text-sm text-gray-500 mb-2">155 / 284</div>
-                  <div className="text-4xl font-bold text-[#2A362B]">67%</div>
+                  <div className="text-sm text-gray-500 mb-2">PDVs atendidos hoje</div>
+                  <div className="text-4xl font-bold text-[#2A362B]">{percentualPdvsAtendidos}%</div>
                 </div>
               </div>
             </div>
 
             <div className="rounded-xl border bg-white p-6 shadow-sm">
-              <h3 className="font-bold text-gray-700 mb-4">Texto</h3>
+              <h3 className="font-bold text-gray-700 mb-4">Distribuição por status</h3>
               <div className="flex flex-col md:flex-row gap-4">
-                <div className="w-full md:w-1/2 h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[220px] min-w-0 w-full md:w-1/2">
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                    minWidth={0}
+                    minHeight={220}
+                    initialDimension={{ width: 320, height: 220 }}
+                  >
                     <PieChart>
-                      <Pie data={targetRings} dataKey="value" innerRadius={40} outerRadius={80} paddingAngle={4} stroke="none">
-                        {targetRings.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                      <Pie data={displayStatusData} dataKey="value" innerRadius={40} outerRadius={80} paddingAngle={4} stroke="none">
+                        {displayStatusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="w-full md:w-1/2 flex flex-col justify-center">
-                  {userRanking.map((u, i) => (
+                  {(statusData.length > 0 ? statusData : userRanking).map((u, i) => (
                     <div key={i} className="flex items-center justify-between text-sm mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: u.color }} />
@@ -118,7 +247,9 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-sm">
                         <div className="font-bold text-[#2A362B]">{u.value}</div>
-                        <div className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full ${u.isNegative ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{u.trend}</div>
+                        {'trend' in u ? (
+                          <div className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full ${u.isNegative ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{u.trend}</div>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -131,8 +262,14 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <h3 className="font-bold text-gray-700 mb-4">Visitas realizadas de promotores</h3>
-              <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[220px] min-w-0 w-full">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={0}
+                  minHeight={220}
+                  initialDimension={{ width: 520, height: 220 }}
+                >
                   <BarChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10 }} />
@@ -147,8 +284,14 @@ export default function DashboardPage() {
 
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <h3 className="font-bold text-gray-700 mb-4">Texto</h3>
-              <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[220px] min-w-0 w-full">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={0}
+                  minHeight={220}
+                  initialDimension={{ width: 520, height: 220 }}
+                >
                   <LineChart data={postsData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10 }} />

@@ -1,3 +1,4 @@
+@import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -122,4 +123,23 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.local-coordinate-pin {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border: 3px solid #ffffff;
+  border-radius: 9999px 9999px 9999px 0;
+  background: #cf9d09;
+  box-shadow: 0 10px 24px rgb(26 40 31 / 0.24);
+  transform: rotate(-45deg);
+}
+
+.local-coordinate-pin::after {
+  position: absolute;
+  inset: 6px;
+  content: "";
+  border-radius: 9999px;
+  background: #25352c;
 }

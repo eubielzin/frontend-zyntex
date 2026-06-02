@@ -10,6 +10,7 @@ import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 import { fetchCepData } from "@/lib/cep"
+import { LocalCoordinateMap } from "@/components/local-coordinate-map"
 
 const initialFormData = {
   descricao: "",
@@ -261,6 +262,14 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleCoordinateChange = (coordinates: { latitude: number; longitude: number }) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: String(coordinates.latitude),
+      longitude: String(coordinates.longitude)
+    }));
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -486,6 +495,14 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
                         <div className="space-y-2"><Label  className="text-[13px] font-medium text-gray-700">Latitude GPS</Label><Input disabled name="coordenadaGPS.latitude" type="number" step="any" value={formData?.latitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Longitude GPS</Label><Input disabled name="coordenadaGPS.longitude" type="number" step="any" value={formData?.longitude || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                        <LocalCoordinateMap
+                          latitude={formData?.latitude || ""}
+                          longitude={formData?.longitude || ""}
+                          onChange={handleCoordinateChange}
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
