@@ -22,6 +22,7 @@ type ProgressItemData = {
   nome: string
   progresso: number
   status: string
+  id?: number
   total?: number
   concluidas?: number
 }
@@ -189,6 +190,7 @@ function buildStatus(progresso: number, concluidas?: number) {
 function mapProgressItems(records: DashboardRecord[], nameKeys: string[]) {
   return records
     .map((item) => {
+      const id = getNumber(item, ["promotorId", "industriaId", "id"])
       const total = getNumber(item, [
         "totalVisitas",
         "quantidadeVisitas",
@@ -240,6 +242,7 @@ function mapProgressItems(records: DashboardRecord[], nameKeys: string[]) {
         nome: getText(item, nameKeys),
         progresso,
         status,
+        id,
         total,
         concluidas,
       }
@@ -457,15 +460,16 @@ function ProgressItem({
   progresso,
   status,
   icon: Icon,
+  href,
   total,
   concluidas,
 }: ProgressItemData & {
   icon: LucideIcon
+  href?: string
 }) {
   const isFinished = progresso >= 100
-
-  return (
-    <div className="space-y-3 rounded-2xl border border-transparent p-2 transition-colors hover:border-[#eceae2] hover:bg-[#fbfaf6]">
+  const content = (
+    <>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f4f1e7] text-[#56714f]">
@@ -500,6 +504,23 @@ function ProgressItem({
           <span>{progresso}%</span>
         </div>
       </div>
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block space-y-3 rounded-2xl border border-transparent p-2 transition-colors hover:border-[#cfe9d2] hover:bg-[#f3fbf5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#cf9d09] focus-visible:ring-offset-2"
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-transparent p-2 transition-colors hover:border-[#eceae2] hover:bg-[#fbfaf6]">
+      {content}
     </div>
   )
 }
@@ -510,12 +531,14 @@ function ProgressPanel({
   items,
   emptyText = "Nenhum registro encontrado.",
   loading: isLoading = false,
+  getItemHref,
 }: {
   title: string
   icon: LucideIcon
   items: ProgressItemData[]
   emptyText?: string
   loading?: boolean
+  getItemHref?: (item: ProgressItemData) => string
 }) {
   return (
     <section className="rounded-[24px] border border-[#e8e6df] bg-white p-5 shadow-[0_16px_50px_rgba(26,40,31,0.06)] sm:p-6">
@@ -532,7 +555,14 @@ function ProgressPanel({
             Carregando dados...
           </div>
         ) : items.length > 0 ? (
-          items.map((item) => <ProgressItem key={item.nome} {...item} icon={Icon} />)
+          items.map((item) => (
+            <ProgressItem
+              key={item.id ?? item.nome}
+              {...item}
+              icon={Icon}
+              href={getItemHref?.(item)}
+            />
+          ))
         ) : (
           <div className="rounded-2xl border border-[#eceae2] bg-[#fbfaf6] p-5 text-sm font-medium text-[#7b847a]">
             {emptyText}
@@ -642,6 +672,26 @@ export default function VisitasConcluidasPage() {
           items={dashboard.porPromotor}
           loading={loadingDashboard}
           emptyText="Nenhum promotor retornou do DashboardController."
+          getItemHref={(item) => {
+            const params = new URLSearchParams()
+            params.set("data", dashboardDate)
+            params.set("promotora", item.nome)
+            params.set("progresso", String(item.progresso))
+
+            if (typeof item.id === "number") {
+              params.set("promotorId", String(item.id))
+            }
+
+            if (typeof item.total === "number") {
+              params.set("planejadas", String(item.total))
+            }
+
+            if (typeof item.concluidas === "number") {
+              params.set("concluidas", String(item.concluidas))
+            }
+
+            return `/dashboard/status-promotora?${params.toString()}`
+          }}
         />
         <ProgressPanel
           title="Por Indústria"

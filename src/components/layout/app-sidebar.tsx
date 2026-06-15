@@ -38,12 +38,12 @@ const MENU_ITEMS: MenuItem[] = [
     icon: "/icons/person.png", 
     url: "/dashboard/promotores",
   },
-  {
-    title: "Tarefas",
-    icon: "/icons/task.png", 
-    url: "/dashboard/tarefas",
+  // {
+  //   title: "Tarefas",
+  //   icon: "/icons/task.png", 
+  //   url: "/dashboard/tarefas",
     
-  },
+  // },
   {
     title: "Locais",
     icon: "/icons/distance.png",

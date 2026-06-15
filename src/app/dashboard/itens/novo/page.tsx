@@ -8,18 +8,14 @@ import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
-
-interface Industria {
-  id: number;
-  nomeIndustria: string; 
-}
+import { normalizeIndustriaOptions, type IndustriaOption } from "@/lib/industria-options"
 
 export default function NovoItemPage() {
   const router = useRouter();
   const itemApiUrl = buildApiUrl("/item");
   const industriaSelectApiUrl = buildApiUrl("/industria/select");
   const [loading, setLoading] = useState(false);
-  const [industrias, setIndustrias] = useState<Industria[]>([]);
+  const [industrias, setIndustrias] = useState<IndustriaOption[]>([]);
   const [loadingIndustrias, setLoadingIndustrias] = useState(true);
   const [isSupOpen, setIsSupOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -39,7 +35,7 @@ export default function NovoItemPage() {
         const response = await fetch(industriaSelectApiUrl);
         if (response.ok) {
           const data = await response.json();
-          setIndustrias(data);
+          setIndustrias(normalizeIndustriaOptions(data));
         }
       } catch (error) {
         console.error("Erro ao buscar indústrias:", error);

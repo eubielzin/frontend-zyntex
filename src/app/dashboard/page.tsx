@@ -188,7 +188,11 @@ export default function DashboardPage() {
                 />
               </div>
             </Link>
-            <StatCard title="Promotores em campo" value={formatStatValue(dashboard?.promotoresEmCampo)} />
+            <Link href={`/dashboard/visitas-concluidas?data=${dashboardDate}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#cf9d09] focus-visible:ring-offset-2">
+              <div className="transition-transform hover:-translate-y-0.5">
+                <StatCard title="Promotores em campo" value={formatStatValue(dashboard?.promotoresEmCampo)} />
+              </div>
+            </Link>
             <StatCard title="Visitas em execução" value={formatStatValue(dashboard?.visitasEmExecucao)} />
             <StatCard title="Visitas justificadas" value={formatStatValue(dashboard?.visitasJustificadas)} />
           </div>

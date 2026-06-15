@@ -260,7 +260,13 @@ export default function ListaIndustriasPage() {
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto xl:justify-end">
-            
+
+            <Button asChild className="h-[45px] w-full gap-2 bg-[#2E3D2A] text-white hover:bg-[#1f2920] sm:w-auto">
+              <Link href="/dashboard/tarefas/novo">
+                <Plus className="h-4 w-4" />
+                Adicionar Tarefa
+              </Link>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="group h-[45px] w-full border-gray-200 text-gray-700 data-[state=open]:bg-gray-50 sm:w-auto">

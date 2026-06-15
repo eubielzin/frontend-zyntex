@@ -1,15 +1,17 @@
 "use client"
 
-import { ChevronLeft, ArrowRight, Save, Loader2, Pencil } from "lucide-react"
+import { ChevronLeft, ArrowRight, Save, Loader2, Pencil, ListTodo, Plus, Search, X } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 import { fetchCepData } from "@/lib/cep"
+import { formatCNPJ, getIndustriaApiErrorMessage, isValidCNPJ, onlyCnpjDigits } from "@/lib/cnpj"
+import { fetchTodasTarefas, type TarefaIndustriaOption } from "@/lib/tarefa-industria"
 
 const COR_SELECAO = "#cf9d09";
 
@@ -18,6 +20,10 @@ export default function NovaIndustriaPage() {
   const [activeTab, setActiveTab] = useState("geral");
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingTarefas, setLoadingTarefas] = useState(false);
+  const [tarefasDisponiveis, setTarefasDisponiveis] = useState<TarefaIndustriaOption[]>([]);
+  const [tarefasSelecionadasIds, setTarefasSelecionadasIds] = useState<number[]>([]);
+  const [buscaTarefa, setBuscaTarefa] = useState("");
 
   // URL ajustada para o seu Controller Java: @RequestMapping("/api/industria")
   // Adicionado tratamento para não duplicar o /api caso já exista na variável de ambiente
@@ -52,7 +58,35 @@ export default function NovaIndustriaPage() {
   // Funções de Máscara
   const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
-  const formatCNPJ = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2").slice(0, 18);
+
+  useEffect(() => {
+    const carregarTarefas = async () => {
+      try {
+        setLoadingTarefas(true);
+        setTarefasDisponiveis(await fetchTodasTarefas());
+      } catch (error) {
+        console.error("Erro ao carregar tarefas:", error);
+      } finally {
+        setLoadingTarefas(false);
+      }
+    };
+
+    carregarTarefas();
+  }, []);
+
+  const tarefasSelecionadas = tarefasDisponiveis.filter((tarefa) => tarefasSelecionadasIds.includes(tarefa.id));
+  const tarefasNaoSelecionadas = tarefasDisponiveis.filter((tarefa) => !tarefasSelecionadasIds.includes(tarefa.id));
+  const tarefasFiltradas = tarefasNaoSelecionadas.filter((tarefa) =>
+    tarefa.nome.toLowerCase().includes(buscaTarefa.toLowerCase())
+  );
+
+  const adicionarTarefa = (tarefaId: number) => {
+    setTarefasSelecionadasIds((prev) => (prev.includes(tarefaId) ? prev : [...prev, tarefaId]));
+  };
+
+  const removerTarefa = (tarefaId: number) => {
+    setTarefasSelecionadasIds((prev) => prev.filter((id) => id !== tarefaId));
+  };
 
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;
@@ -105,6 +139,8 @@ export default function NovaIndustriaPage() {
     // Validações básicas para evitar o Erro 400 (Bad Request) do Java
     if (!formData.nomeIndustria.trim()) return alert("O Nome da Indústria é obrigatório.");
     if (!formData.razaoSocial.trim()) return alert("A Razão Social é obrigatória.");
+    if (!formData.nomeFantasia.trim()) return alert("O Nome Fantasia é obrigatório.");
+    if (!isValidCNPJ(formData.cnpj)) return alert("Informe um CNPJ válido para cadastrar a indústria.");
     if (!formData.endereco.logradouro.trim()) return alert("O Logradouro é obrigatório.");
 
     try {
@@ -112,7 +148,8 @@ export default function NovaIndustriaPage() {
       
       const payload = {
         ...formData,
-        cnpj: formData.cnpj.replace(/\D/g, ""),
+        cnpj: onlyCnpjDigits(formData.cnpj),
+        tarefasIds: tarefasSelecionadasIds,
         endereco: {
           ...formData.endereco,
           // Garante que a sigla vá em Caixa Alta para o Enum Estado Java
@@ -132,7 +169,7 @@ export default function NovaIndustriaPage() {
       } else {
         const errText = await response.text();
         console.error("Erro API:", errText);
-        alert("Erro ao salvar a indústria. Verifique se o CNPJ é válido.");
+        alert(getIndustriaApiErrorMessage(response.status, errText));
       }
     } catch (error) {
       console.error("Erro de conexão:", error);
@@ -167,6 +204,12 @@ export default function NovaIndustriaPage() {
           >
             2. Endereço
           </TabsTrigger>
+          <TabsTrigger 
+            value="tarefas" 
+            className="rounded-t-lg px-6 py-3 font-montserrat text-gray-400 data-[state=active]:bg-white data-[state=active]:text-[#2A362B] border-x border-t border-transparent data-[state=active]:border-gray-200"
+          >
+            3. Tarefas
+          </TabsTrigger>
         </TabsList>
 
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 w-full min-h-[600px]">
@@ -192,11 +235,11 @@ export default function NovaIndustriaPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-gray-700">Nome Fantasia</Label>
+                            <Label className="text-[13px] font-medium text-gray-700">Nome Fantasia *</Label>
                             <Input name="nomeFantasia" value={formData.nomeFantasia} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Nome comercial" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-gray-700">CNPJ</Label>
+                            <Label className="text-[13px] font-medium text-gray-700">CNPJ *</Label>
                             <Input name="cnpj" value={formData.cnpj} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="00.000.000/0000-00" maxLength={18} />
                         </div>
                     </div>
@@ -264,8 +307,95 @@ export default function NovaIndustriaPage() {
 
                 <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
                   <Button variant="ghost" onClick={() => setActiveTab("geral")} className="text-gray-500 font-medium">Voltar</Button>
+                  <Button onClick={() => setActiveTab("tarefas")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white px-8 h-11 rounded-md text-[13px] font-medium transition-colors">
+                    Próxima Etapa <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="tarefas" className="mt-0">
+                <div className="mb-8 flex items-center gap-3">
+                    <div className="rounded-md bg-[#2A362B] p-1.5 text-white">
+                        <ListTodo className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-[15px] font-bold text-[#2A362B]">Vincule tarefas a esta indústria</h2>
+                        <p className="text-xs font-medium text-gray-500">A tarefa fica sem indústria até ser vinculada aqui.</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                        <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                            <span className="text-xs font-bold uppercase text-gray-600">Disponíveis ({tarefasNaoSelecionadas.length})</span>
+                            {loadingTarefas && <Loader2 className="h-4 w-4 animate-spin text-[#cf9d09]" />}
+                        </div>
+                        <div className="border-b bg-white p-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Input
+                                    value={buscaTarefa}
+                                    onChange={(event) => setBuscaTarefa(event.target.value)}
+                                    placeholder="Filtrar tarefa..."
+                                    className="h-10 pl-9 text-sm focus-visible:ring-[#2A362B]"
+                                />
+                            </div>
+                        </div>
+                        <div className="h-[280px] overflow-y-auto">
+                            {loadingTarefas ? (
+                                <div className="flex h-full items-center justify-center">
+                                    <Loader2 className="h-5 w-5 animate-spin text-[#cf9d09]" />
+                                </div>
+                            ) : tarefasFiltradas.length === 0 ? (
+                                <div className="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                                    Nenhuma tarefa disponível.
+                                </div>
+                            ) : (
+                                tarefasFiltradas.map((tarefa) => (
+                                    <div key={tarefa.id} className="flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-gray-50">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-gray-700">{tarefa.nome}</p>
+                                            {/* {tarefa.nomeIndustria ? (
+                                                <p className="truncate text-xs text-gray-400">Atual: {tarefa.nomeIndustria}</p>
+                                            ) : null} */}
+                                        </div>
+                                        <Button type="button" size="icon" variant="ghost" onClick={() => adicionarTarefa(tarefa.id)} className="h-8 w-8 shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700">
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-[#d9e8dc] bg-[#fbfefb]">
+                        <div className="border-b bg-[#2E3D2A] px-4 py-3">
+                            <span className="text-xs font-bold uppercase text-white">Vinculadas ({tarefasSelecionadas.length})</span>
+                        </div>
+                        <div className="h-[333px] overflow-y-auto">
+                            {tarefasSelecionadas.length === 0 ? (
+                                <div className="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                                    Nenhuma tarefa selecionada.
+                                </div>
+                            ) : (
+                                tarefasSelecionadas.map((tarefa) => (
+                                    <div key={tarefa.id} className="flex items-center justify-between gap-3 border-b border-green-100 bg-green-50/40 px-4 py-3 last:border-b-0">
+                                        <span className="truncate text-sm font-semibold text-[#2A362B]">{tarefa.nome}</span>
+                                        <Button type="button" size="icon" variant="ghost" onClick={() => removerTarefa(tarefa.id)} className="h-8 w-8 shrink-0 text-red-500 hover:bg-red-50 hover:text-red-700">
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
+                  <Button variant="ghost" onClick={() => setActiveTab("endereco")} className="text-gray-500 font-medium">Voltar</Button>
                   <Button onClick={handleSave} disabled={loading} className="text-white px-10 h-11 rounded-md font-medium transition-colors gap-2" style={{ backgroundColor: COR_SELECAO }}>
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Indústria"}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Salvar Indústria
                   </Button>
                 </div>
             </TabsContent>

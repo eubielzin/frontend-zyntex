@@ -9,11 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { buildApiUrl } from "@/lib/api-url"
-
-interface Industria {
-  id: number;
-  nomeIndustria: string;
-}
+import { normalizeIndustriaOptions, type IndustriaOption } from "@/lib/industria-options"
 
 export default function EditarItemPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -24,7 +20,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
 
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingSalvar, setLoadingSalvar] = useState(false);
-  const [industrias, setIndustrias] = useState<Industria[]>([]);
+  const [industrias, setIndustrias] = useState<IndustriaOption[]>([]);
   const [loadingIndustrias, setLoadingIndustrias] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -77,7 +73,7 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
 
         if (industriasRes.ok) {
             const industriasData = await industriasRes.json();
-            setIndustrias(industriasData);
+            setIndustrias(normalizeIndustriaOptions(industriasData));
         }
 
       } catch (error) {

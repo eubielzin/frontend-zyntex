@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, ArrowRight, Loader2, Pencil, Info } from "lucide-react" // Importei o Info aqui
+import { ChevronLeft, ArrowRight, Loader2, Pencil, Info, ListTodo, Plus, Search, X } from "lucide-react" // Importei o Info aqui
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,8 +11,27 @@ import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
 import { fetchCepData } from "@/lib/cep"
+import { formatCNPJ, getIndustriaApiErrorMessage, isValidCNPJ, onlyCnpjDigits } from "@/lib/cnpj"
+import { fetchTodasTarefas, type TarefaIndustriaOption } from "@/lib/tarefa-industria"
 
 const COR_SELECAO = "#cf9d09";
+
+type IndustriaResumo = {
+  id: number;
+  ativo?: boolean;
+  nomeIndustria?: string;
+  razaoSocial?: string;
+  nomeFantasia?: string;
+  cnpj?: string;
+  telefone?: string;
+  email?: string;
+  identificadorAlternativo?: string;
+  tipoIndustria?: string;
+  estado?: string;
+  cidade?: string;
+  cep?: string;
+  tarefasIds?: number[];
+}
 
 export default function EditarIndustriaPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -23,11 +42,43 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
   const [loadingSalvar, setLoadingSalvar] = useState(false);
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingTarefas, setLoadingTarefas] = useState(false);
+  const [tarefasDisponiveis, setTarefasDisponiveis] = useState<TarefaIndustriaOption[]>([]);
+  const [tarefasSelecionadasIds, setTarefasSelecionadasIds] = useState<number[]>([]);
+  const [buscaTarefa, setBuscaTarefa] = useState("");
   const apiUrl = buildApiUrl("/industria");
+
+  const buscarIndustriaResumo = async (id: string) => {
+    const idNumerico = Number(id);
+    let page = 0;
+    let totalPages = 1;
+
+    while (page < totalPages) {
+      const response = await fetch(`${apiUrl}/paged?page=${page}&size=100`);
+
+      if (!response.ok) {
+        throw new Error("Não foi possível carregar os dados da indústria.");
+      }
+
+      const data = await response.json();
+      const content = Array.isArray(data?.content) ? data.content : [];
+      const industria = content.find((item: IndustriaResumo) => Number(item.id) === idNumerico);
+
+      if (industria) {
+        return industria;
+      }
+
+      totalPages = Number(data?.totalPages) || 1;
+      page += 1;
+    }
+
+    throw new Error("Indústria não encontrada.");
+  };
 
   // Adicionado 'ativo' no estado inicial
   const [formData, setFormData] = useState({
-    ativo: true, 
+    ativo: true,
+    nomeIndustria:  "",
     razaoSocial: "",
     nomeFantasia: "",
     cnpj: "",
@@ -55,32 +106,51 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const response = await fetch(`${apiUrl}/${industriaId}`);
-        if (!response.ok) throw new Error("Indústria não encontrada");
-        
-        const data = await response.json();
+        setLoadingTarefas(true);
+        const [data, tarefas] = await Promise.all([
+          buscarIndustriaResumo(industriaId),
+          fetchTodasTarefas().catch((error) => {
+            console.error("Erro ao carregar tarefas:", error);
+            return [] as TarefaIndustriaOption[];
+          })
+        ]);
+        const industriaIdNumerico = Number(industriaId);
         
         // Mapeamento garantindo que o objeto de endereço exista
         setFormData({
-          ...data,
           ativo: data.ativo !== undefined ? data.ativo : true, // Carrega o status do banco
+          nomeIndustria: data.nomeIndustria || "",
           razaoSocial: data.razaoSocial || "",
           nomeFantasia: data.nomeFantasia || "",
-          cnpj: data.cnpj || "",
+          cnpj: formatCNPJ(data.cnpj || ""),
           telefone: data.telefone || "",
           email: data.email || "",
           identificadorAlternativo: data.identificadorAlternativo || "",
           tipoIndustria: data.tipoIndustria || "",
           endereco: {
             ...formData.endereco,
-            ...(data.endereco || {})
+            cep: data.cep || "",
+            cidade: data.cidade || "",
+            estado: data.estado || "",
           }
         });
+        setTarefasDisponiveis(tarefas);
+        const tarefasDaIndustria = Array.isArray(data.tarefasIds)
+          ? data.tarefasIds.map(Number).filter(Number.isFinite)
+          : tarefas
+              .filter(
+                (tarefa) =>
+                  tarefa.idIndustria === industriaIdNumerico ||
+                  tarefa.industriasIds?.includes(industriaIdNumerico)
+              )
+              .map((tarefa) => tarefa.id);
+        setTarefasSelecionadasIds(tarefasDaIndustria);
       } catch (error) {
         console.error("Erro busca:", error);
         router.push("/dashboard/industrias");
       } finally {
         setLoadingInicial(false);
+        setLoadingTarefas(false);
       }
     };
     if (industriaId) carregarDados();
@@ -89,7 +159,20 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
   // Máscaras
   const formatCEP = (v: string) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9);
   const formatPhone = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15);
-  const formatCNPJ = (v: string) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2").slice(0, 18);
+
+  const tarefasSelecionadas = tarefasDisponiveis.filter((tarefa) => tarefasSelecionadasIds.includes(tarefa.id));
+  const tarefasNaoSelecionadas = tarefasDisponiveis.filter((tarefa) => !tarefasSelecionadasIds.includes(tarefa.id));
+  const tarefasFiltradas = tarefasNaoSelecionadas.filter((tarefa) =>
+    tarefa.nome.toLowerCase().includes(buscaTarefa.toLowerCase())
+  );
+
+  const adicionarTarefa = (tarefaId: number) => {
+    setTarefasSelecionadasIds((prev) => (prev.includes(tarefaId) ? prev : [...prev, tarefaId]));
+  };
+
+  const removerTarefa = (tarefaId: number) => {
+    setTarefasSelecionadasIds((prev) => prev.filter((id) => id !== tarefaId));
+  };
 
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;
@@ -136,11 +219,36 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
   };
 
   const handleSave = async () => {
+    if (!formData.nomeIndustria.trim()) {
+      alert("O Nome da Indústria é obrigatório.");
+      return;
+    }
+
+    if (!formData.razaoSocial.trim()) {
+      alert("A Razão Social é obrigatória.");
+      return;
+    }
+
+    if (!formData.nomeFantasia.trim()) {
+      alert("O Nome Fantasia é obrigatório.");
+      return;
+    }
+
+    if (!isValidCNPJ(formData.cnpj)) {
+      alert("Informe um CNPJ válido para salvar a indústria.");
+      return;
+    }
+
     try {
       setLoadingSalvar(true);
+      const enderecoPayload = Object.fromEntries(
+        Object.entries(formData.endereco).filter(([, value]) => String(value ?? "").trim())
+      );
       const payload = {
         ...formData,
-        cnpj: formData.cnpj.replace(/\D/g, "")
+        cnpj: onlyCnpjDigits(formData.cnpj),
+        tarefasIds: tarefasSelecionadasIds,
+        endereco: Object.keys(enderecoPayload).length > 0 ? enderecoPayload : undefined,
       };
 
       const response = await fetch(`${apiUrl}/${industriaId}`, {
@@ -153,9 +261,14 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
         router.push("/dashboard/industrias");
         router.refresh();
       } else {
-        alert("Erro ao atualizar dados.");
+        const errText = await response.text();
+        console.error("Erro API:", errText);
+        alert(getIndustriaApiErrorMessage(response.status, errText));
       }
-    } catch (error) { console.error(error); } finally { setLoadingSalvar(false); }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão com o servidor.");
+    } finally { setLoadingSalvar(false); }
   };
 
   if (loadingInicial) return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="animate-spin text-[#cf9d09] h-8 w-8" /></div>;
@@ -186,6 +299,12 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
             className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
           >
             2. Endereço
+          </TabsTrigger>
+          <TabsTrigger 
+            value="tarefas" 
+            className="flex-1 py-2.5 text-sm font-medium text-gray-500 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2A362B] data-[state=active]:font-bold data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 transition-all"
+          >
+            3. Tarefas
           </TabsTrigger>
         </TabsList>
 
@@ -222,34 +341,44 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
+                            <Label className="text-[13px] font-medium text-gray-700">Nome da Indústria *</Label>
+                            <div className="relative">
+                                <Input name="nomeIndustria" value={formData.nomeIndustria} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" placeholder="Nome interno ou apelido" />
+                                <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Razão Social *</Label>
                             <div className="relative">
                                 <Input name="razaoSocial" value={formData.razaoSocial} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] pr-10 text-sm" />
                                 <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-gray-400 pointer-events-none" />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-gray-700">Nome Fantasia</Label>
+                            <Label className="text-[13px] font-medium text-gray-700">Nome Fantasia *</Label>
                             <Input name="nomeFantasia" value={formData.nomeFantasia} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[13px] font-medium text-gray-700">CNPJ *</Label>
+                            <Input name="cnpj" value={formData.cnpj} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" maxLength={18} />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-gray-700">CNPJ</Label>
-                            <Input name="cnpj" value={formData.cnpj} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" maxLength={18} />
-                        </div>
-                        <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Identificador Alternativo</Label>
                             <Input name="identificadorAlternativo" value={formData.identificadorAlternativo} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" />
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">E-mail</Label>
                             <Input name="email" type="email" value={formData.email} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" />
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Telefone</Label>
                             <Input name="telefone" value={formData.telefone} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" />
@@ -299,8 +428,95 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
 
                 <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
                   <Button variant="ghost" onClick={() => setActiveTab("geral")} className="text-gray-500 font-medium">Voltar</Button>
+                  <Button onClick={() => setActiveTab("tarefas")} className="bg-[#2E3D2A] hover:bg-[#1f2920] text-white px-8 h-11 rounded-md text-[13px] font-medium transition-colors">
+                    Próxima Etapa <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="tarefas" className="mt-0">
+                <div className="mb-8 flex items-center gap-3">
+                    <div className="rounded-md bg-[#2A362B] p-1.5 text-white">
+                        <ListTodo className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-[15px] font-bold text-[#2A362B]">Tarefas da indústria</h2>
+                        <p className="text-xs font-medium text-gray-500">Vincule as tarefas que pertencem a esta indústria.</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                        <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                            <span className="text-xs font-bold uppercase text-gray-600">Disponíveis ({tarefasNaoSelecionadas.length})</span>
+                            {loadingTarefas && <Loader2 className="h-4 w-4 animate-spin text-[#cf9d09]" />}
+                        </div>
+                        <div className="border-b bg-white p-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Input
+                                    value={buscaTarefa}
+                                    onChange={(event) => setBuscaTarefa(event.target.value)}
+                                    placeholder="Filtrar tarefa..."
+                                    className="h-10 pl-9 text-sm focus-visible:ring-[#2A362B]"
+                                />
+                            </div>
+                        </div>
+                        <div className="h-[280px] overflow-y-auto">
+                            {loadingTarefas ? (
+                                <div className="flex h-full items-center justify-center">
+                                    <Loader2 className="h-5 w-5 animate-spin text-[#cf9d09]" />
+                                </div>
+                            ) : tarefasFiltradas.length === 0 ? (
+                                <div className="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                                    Nenhuma tarefa disponível.
+                                </div>
+                            ) : (
+                                tarefasFiltradas.map((tarefa) => (
+                                    <div key={tarefa.id} className="flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-gray-50">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-gray-700">{tarefa.nome}</p>
+                                            {tarefa.nomeIndustria ? (
+                                                <p className="truncate text-xs text-gray-400">Atual: {tarefa.nomeIndustria}</p>
+                                            ) : null}
+                                        </div>
+                                        <Button type="button" size="icon" variant="ghost" onClick={() => adicionarTarefa(tarefa.id)} className="h-8 w-8 shrink-0 text-green-600 hover:bg-green-50 hover:text-green-700">
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-[#d9e8dc] bg-[#fbfefb]">
+                        <div className="border-b bg-[#2E3D2A] px-4 py-3">
+                            <span className="text-xs font-bold uppercase text-white">Vinculadas ({tarefasSelecionadas.length})</span>
+                        </div>
+                        <div className="h-[333px] overflow-y-auto">
+                            {tarefasSelecionadas.length === 0 ? (
+                                <div className="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                                    Nenhuma tarefa selecionada.
+                                </div>
+                            ) : (
+                                tarefasSelecionadas.map((tarefa) => (
+                                    <div key={tarefa.id} className="flex items-center justify-between gap-3 border-b border-green-100 bg-green-50/40 px-4 py-3 last:border-b-0">
+                                        <span className="truncate text-sm font-semibold text-[#2A362B]">{tarefa.nome}</span>
+                                        <Button type="button" size="icon" variant="ghost" onClick={() => removerTarefa(tarefa.id)} className="h-8 w-8 shrink-0 text-red-500 hover:bg-red-50 hover:text-red-700">
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
+                  <Button variant="ghost" onClick={() => setActiveTab("endereco")} className="text-gray-500 font-medium">Voltar</Button>
                   <Button onClick={handleSave} disabled={loadingSalvar} className="text-white px-10 h-11 rounded-md font-medium transition-colors gap-2" style={{ backgroundColor: COR_SELECAO }}>
-                    {loadingSalvar && <Loader2 className="h-4 w-4 animate-spin" />} Salvar Alterações
+                    {loadingSalvar ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Salvar Alterações
                   </Button>
                 </div>
             </TabsContent>
