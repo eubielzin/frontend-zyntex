@@ -38,28 +38,16 @@ import {
 } from "@/components/ui/table"
 import { buildApiUrl } from "@/lib/api-url"
 
-type RawAlbumCompany = {
-  id: number
-  nomeEmpresa: string
+type BackendAlbum = {
+  rotaLocalTarefaId: number
   quantidadeFotos: number
 }
 
-type TaskLocalSource = {
-  id: number
-  tarefaLocalId?: number | null
-}
-
-type AlbumPhoto = {
-  id: number
-  url?: string
-  nomeArquivo?: string
-  caminho?: string
-  industria?: string
-  categoria?: string
-  quantidade?: number
-  localId?: number
-  localNome?: string
-  dataExecucao?: string
+type IndustriaAlbum = {
+  industriaId: number
+  nomeIndustria: string
+  quantidadeFotos: number
+  albuns: BackendAlbum[]
 }
 
 type AlbumGroup = {
@@ -70,77 +58,6 @@ type AlbumGroup = {
 }
 
 const PAGE_SIZE = 16
-const albumGroupsCache = new Map<string, Promise<AlbumGroup[]>>()
-
-const extractCompanyNameFromSource = (source?: string) => {
-  const sanitizedSource = (source || "").trim().replace(/^https?:\/\//i, "")
-
-  if (!sanitizedSource) {
-    return ""
-  }
-
-  const pathWithoutQuery = sanitizedSource.split("?")[0]
-  const [firstSegment] = pathWithoutQuery.split("/").filter(Boolean)
-
-  return firstSegment ? decodeURIComponent(firstSegment) : ""
-}
-
-const normalizeDateValue = (value?: string | null) => {
-  return (value || "").trim()
-}
-
-const buildAlbumPhotosUrl = (albumId: number, dataInicio?: string, dataFim?: string) => {
-  const startDate = normalizeDateValue(dataInicio)
-  const endDate = normalizeDateValue(dataFim)
-
-  if (startDate && endDate) {
-    const params = new URLSearchParams({
-      dataInicio: startDate,
-      dataFim: endDate,
-    })
-
-    return buildApiUrl(`/imagem/tarefa-local/${albumId}/por-data?${params.toString()}`)
-  }
-
-  return buildApiUrl(`/imagem/tarefa-local/${albumId}`)
-}
-
-const getAlbumPhotoCompanyName = (photo: AlbumPhoto) => {
-  if (photo.industria?.trim()) {
-    return photo.industria.trim()
-  }
-
-  return extractCompanyNameFromSource(photo.caminho?.trim() || photo.url?.trim() || "")
-}
-
-const groupAlbumsByCompany = (albums: Array<RawAlbumCompany & { albumIds: number[] }>) => {
-  const groupedAlbums = new Map<string, AlbumGroup>()
-
-  albums.forEach((album) => {
-    const displayName = album.nomeEmpresa.trim() || `Album ${album.id}`
-    const groupKey = displayName.toLowerCase()
-
-    if (!groupedAlbums.has(groupKey)) {
-      groupedAlbums.set(groupKey, {
-        id: groupKey,
-        nomeEmpresa: displayName,
-        quantidadeFotos: album.quantidadeFotos,
-        albumIds: [...album.albumIds],
-      })
-      return
-    }
-
-    const currentGroup = groupedAlbums.get(groupKey)!
-    currentGroup.quantidadeFotos += album.quantidadeFotos
-    currentGroup.albumIds = Array.from(new Set([...currentGroup.albumIds, ...album.albumIds]))
-  })
-
-  return Array.from(groupedAlbums.values()).sort((firstAlbum, secondAlbum) =>
-    firstAlbum.nomeEmpresa.localeCompare(secondAlbum.nomeEmpresa, "pt-BR", {
-      sensitivity: "base",
-    })
-  )
-}
 
 export default function AlbumPage() {
   const [albuns, setAlbuns] = React.useState<AlbumGroup[]>([])
@@ -152,167 +69,40 @@ export default function AlbumPage() {
   const [currentPage, setCurrentPage] = React.useState(0)
   const [checkedItems, setCheckedItems] = React.useState<string[]>([])
 
-  const getTaskLocalSourceUrl = React.useCallback(() => buildApiUrl("/validade"), [])
-
-  const enrichAlbumsWithPhotoCount = React.useCallback(
-    async (
-      taskLocalIds: number[],
-      filters: { dataInicio?: string; dataFim?: string }
-    ): Promise<Array<RawAlbumCompany & { albumIds: number[] }>> => {
-      const groupedByTaskLocal = await Promise.all(
-        taskLocalIds.map(async (taskLocalId) => {
-          try {
-            const response = await fetch(
-              buildAlbumPhotosUrl(taskLocalId, filters.dataInicio, filters.dataFim)
-            )
-
-            if (!response.ok) {
-              throw new Error(`Erro ao buscar fotos do tarefaLocal ${taskLocalId}`)
-            }
-
-            const data = (await response.json()) as AlbumPhoto[]
-            const photoList = Array.isArray(data) ? data : []
-            const photoCountByCompany = new Map<
-              string,
-              { displayName: string; photoIds: Set<number>; quantidadeFotos?: number }
-            >()
-
-            photoList.forEach((photo) => {
-              const companyName = getAlbumPhotoCompanyName(photo)
-
-              if (!companyName) {
-                return
-              }
-
-              const companyKey = companyName.toLowerCase()
-              const currentEntry = photoCountByCompany.get(companyKey)
-              const photoIds = currentEntry?.photoIds ?? new Set<number>()
-
-              photoIds.add(photo.id)
-
-              photoCountByCompany.set(companyKey, {
-                displayName: currentEntry?.displayName || companyName,
-                photoIds,
-                quantidadeFotos:
-                  typeof photo.quantidade === "number" && Number.isFinite(photo.quantidade)
-                    ? photo.quantidade
-                    : currentEntry?.quantidadeFotos,
-              })
-            })
-
-            if (photoCountByCompany.size === 0) {
-              return []
-            }
-
-            return Array.from(photoCountByCompany.values()).map(
-              ({ displayName, photoIds, quantidadeFotos }) => {
-                return {
-                  id: taskLocalId,
-                  nomeEmpresa: displayName || `Album ${taskLocalId}`,
-                  quantidadeFotos: quantidadeFotos ?? photoIds.size,
-                  albumIds: [taskLocalId],
-                }
-              }
-            )
-          } catch (error) {
-            console.error(`Erro ao enriquecer o tarefaLocal ${taskLocalId}:`, error)
-            return []
-          }
-        })
-      )
-
-      return groupedByTaskLocal.flat()
-    },
-    []
-  )
-
-  const loadAlbumGroups = React.useCallback(
-    async () => {
-      const cacheKey = JSON.stringify({
-        dataInicio: normalizeDateValue(dataInicio),
-        dataFim: normalizeDateValue(dataFim),
-      })
-      const cachedRequest = albumGroupsCache.get(cacheKey)
-
-      if (cachedRequest) {
-        return cachedRequest
-      }
-
-      const request = (async () => {
-        const sourceResponse = await fetch(getTaskLocalSourceUrl())
-
-        if (!sourceResponse.ok) {
-          throw new Error(`Erro ao buscar fontes do album: ${sourceResponse.status}`)
-        }
-
-        const sourceData = (await sourceResponse.json()) as TaskLocalSource[]
-        const taskLocalIds = Array.from(
-          new Set(
-            (Array.isArray(sourceData) ? sourceData : [])
-              .map((item) => item.tarefaLocalId)
-              .filter((value): value is number => typeof value === "number")
-          )
-        )
-
-        if (taskLocalIds.length === 0) {
-          return []
-        }
-
-        const albumsWithPhotoCount = await enrichAlbumsWithPhotoCount(
-          taskLocalIds,
-          { dataInicio, dataFim }
-        )
-
-        return groupAlbumsByCompany(albumsWithPhotoCount)
-      })()
-
-      albumGroupsCache.set(cacheKey, request)
-
-      request.catch(() => {
-        albumGroupsCache.delete(cacheKey)
-      })
-
-      return request
-    },
-    [dataFim, dataInicio, enrichAlbumsWithPhotoCount, getTaskLocalSourceUrl]
-  )
-
   React.useEffect(() => {
     let ignore = false
 
-    const fetchAllAlbums = async () => {
+    const fetchAlbuns = async () => {
       try {
         setLoading(true)
         setLoadError(null)
 
-        const groups = await loadAlbumGroups()
+        const response = await fetch(buildApiUrl("/imagem/albuns"))
+        if (!response.ok) throw new Error(`Erro ao buscar álbuns: ${response.status}`)
 
-        if (ignore) {
-          return
-        }
+        const data: IndustriaAlbum[] = await response.json()
+        const groups: AlbumGroup[] = data.map((item) => ({
+          id: String(item.industriaId),
+          nomeEmpresa: item.nomeIndustria || `Industria #${item.industriaId}`,
+          quantidadeFotos: item.quantidadeFotos,
+          albumIds: item.albuns.map((a) => a.rotaLocalTarefaId),
+        }))
 
+        if (ignore) return
         setAlbuns(groups)
       } catch (error) {
-        if (ignore) {
-          return
-        }
-
+        if (ignore) return
         console.error("Erro ao buscar book de fotos:", error)
         setAlbuns([])
-        setLoadError("Nao foi possivel carregar o book de fotos com os dados reais.")
+        setLoadError("Não foi possível carregar o book de fotos.")
       } finally {
-        if (!ignore) {
-          setLoading(false)
-        }
+        if (!ignore) setLoading(false)
       }
     }
 
-    fetchAllAlbums()
-
-    return () => {
-      ignore = true
-    }
-  }, [loadAlbumGroups])
+    fetchAlbuns()
+    return () => { ignore = true }
+  }, [])
 
   const albunsFiltrados = React.useMemo(() => {
     const normalizedTerm = termoBusca.trim().toLowerCase()
@@ -542,6 +332,7 @@ export default function AlbumPage() {
                   <TableBody>
                     {albunsDaPagina.map((album) => {
                       const isChecked = checkedItems.includes(album.id)
+                      const hasPhotos = album.albumIds.length > 0
                       const albumIdsParam = album.albumIds.join(",")
                       const dataQuery = new URLSearchParams()
                       dataQuery.set("empresa", album.nomeEmpresa)
@@ -571,29 +362,45 @@ export default function AlbumPage() {
                             />
                           </TableCell>
                           <TableCell className="px-2">
-                            <Link
-                              href={`/dashboard/album/fotos?${dataQuery.toString()}`}
-                              className="truncate text-sm font-medium text-[#4a4a4a] underline-offset-2 hover:text-[#2A362B] hover:underline"
-                            >
-                              {album.nomeEmpresa}
-                            </Link>
+                            {hasPhotos ? (
+                              <Link
+                                href={`/dashboard/album/fotos?${dataQuery.toString()}`}
+                                className="truncate text-sm font-medium text-[#4a4a4a] underline-offset-2 hover:text-[#2A362B] hover:underline"
+                              >
+                                {album.nomeEmpresa}
+                              </Link>
+                            ) : (
+                              <span className="truncate text-sm font-medium text-[#4a4a4a]">
+                                {album.nomeEmpresa}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="px-2 text-right text-sm text-[#6a6a6a]">
                             {album.quantidadeFotos}
                           </TableCell>
                           <TableCell className="pr-3 text-right">
-                            <Button
-                              asChild
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-[#6b6b6b] hover:bg-[#eef3ee] hover:text-[#2A362B]"
-                            >
-                              <Link
-                                href={`/dashboard/album/fotos?${dataQuery.toString()}`}
+                            {hasPhotos ? (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-[#6b6b6b] hover:bg-[#eef3ee] hover:text-[#2A362B]"
+                              >
+                                <Link href={`/dashboard/album/fotos?${dataQuery.toString()}`}>
+                                  <Pencil className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                disabled
+                                className="h-8 w-8 cursor-not-allowed text-[#6b6b6b] opacity-30"
                               >
                                 <Pencil className="h-4 w-4" />
-                              </Link>
-                            </Button>
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       )
