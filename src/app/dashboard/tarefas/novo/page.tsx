@@ -52,9 +52,9 @@ export default function NovaTarefaPage() {
         router.push("/dashboard/tarefas")
         router.refresh()
       } else {
-        const errText = await response.text()
-        console.error("Erro API:", errText)
-        alert("Erro ao salvar a tarefa no servidor.")
+        const errBody = await response.json().catch(() => null)
+        const msg = errBody?.message || "Erro ao salvar a tarefa no servidor."
+        alert(msg)
       }
     } catch (error) {
       console.error("Erro de conexão:", error)
