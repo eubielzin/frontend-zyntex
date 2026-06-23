@@ -170,9 +170,8 @@ export default function ListaUsuariosPage() {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("Erro ao excluir usuário:", response.status, errorText)
-        alert("Não foi possível excluir o usuário.")
+        const errBody = await response.json().catch(() => null)
+        alert(errBody?.message || "Não foi possível excluir o usuário.")
         return
       }
 

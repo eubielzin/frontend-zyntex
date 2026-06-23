@@ -124,7 +124,8 @@ export default function ListaTarefasPage() {
                     setTotalElements(prev => Math.max(0, prev - 1));
                 }
             } else {
-                alert("Erro ao excluir a tarefa. Verifique se ela não está vinculada a alguma Rota.");
+                const errBody = await response.json().catch(() => null);
+                alert(errBody?.message || "Erro ao excluir a tarefa. Verifique se ela não está vinculada a alguma Rota.");
             }
         } catch (error) {
             console.error("Erro de conexão", error);

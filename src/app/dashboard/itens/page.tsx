@@ -131,7 +131,8 @@ export default function ListaItensPage() {
                 setTotalElements(prev => Math.max(0, prev - 1));
             }
         } else {
-            alert("Erro ao excluir o item. Ele pode estar vinculado a outros registros.");
+            const errBody = await response.json().catch(() => null);
+            alert(errBody?.message || "Erro ao excluir o item. Ele pode estar vinculado a outros registros.");
         }
     } catch (error) {
         console.error("Erro de conexão", error);

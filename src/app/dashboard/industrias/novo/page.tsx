@@ -1,8 +1,14 @@
 "use client"
 
-import { ChevronLeft, ArrowRight, Save, Loader2, Pencil, ListTodo, Plus, Search, X } from "lucide-react"
+import { ChevronLeft, ChevronDown, ArrowRight, Save, Loader2, Pencil, ListTodo, Plus, Search, X } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,6 +20,14 @@ import { formatCNPJ, getIndustriaApiErrorMessage, isValidCNPJ, onlyCnpjDigits } 
 import { fetchTodasTarefas, type TarefaIndustriaOption } from "@/lib/tarefa-industria"
 
 const COR_SELECAO = "#cf9d09";
+
+const TIPOS_INDUSTRIA = [
+  { value: "ALIMENTICIA", label: "Alimentícia" },
+  { value: "TEXTIL", label: "Têxtil" },
+  { value: "METALURGICA", label: "Metalúrgica" },
+  { value: "QUIMICA", label: "Química" },
+  { value: "OUTROS", label: "Outros" },
+];
 
 export default function NovaIndustriaPage() {
   const router = useRouter();
@@ -246,28 +260,44 @@ export default function NovaIndustriaPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-gray-700">Identificador Alternativo (Descrição)</Label>
-                            <Input name="identificadorAlternativo" value={formData.identificadorAlternativo} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Código ERP" />
-                        </div>
+                            <Label className="text-[13px] font-medium text-gray-700">Tipo de Indústria*</Label>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex h-11 w-full items-center justify-between rounded-md border  border-[#C59509] bg-[#C59509] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#2A362B] transition-colors"
+                                >
+                                  <span className={formData.tipoIndustria ? "text-white" : "text-[#F2F2F2]"}>
+                                    {TIPOS_INDUSTRIA.find(t => t.value === formData.tipoIndustria)?.label || "Selecione..."}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 text-[#F2F2F2]" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] rounded-lg border border-gray-100 p-1 shadow-md">
+                                {TIPOS_INDUSTRIA.map((tipo) => (
+                                  <DropdownMenuItem
+                                    key={tipo.value}
+                                    onClick={() => setFormData(prev => ({ ...prev, tipoIndustria: tipo.value }))}
+                                    className={`cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#cf9d09]/10 hover:text-[#b8890a] focus:bg-[#cf9d09]/10 focus:text-[#b8890a] ${
+                                      formData.tipoIndustria === tipo.value
+                                        ? "bg-[#cf9d09]/10 font-semibold text-[#b8890a]"
+                                        : "text-gray-700"
+                                    }`}
+                                  >
+                                    {tipo.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>                      
+
                         <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Telefone</Label>
                             <Input name="telefone" value={formData.telefone} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="(00) 00000-0000" maxLength={15} />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[13px] font-medium text-gray-700">Tipo de Indústria</Label>
-                            <select
-                                name="tipoIndustria"
-                                value={formData.tipoIndustria}
-                                onChange={handleInputChange}
-                                className="flex h-11 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2A362B] appearance-none"
-                            >
-                                <option value="" disabled>Selecione...</option>
-                                <option value="ALIMENTICIA" className="text-black">Alimentícia</option>
-                                <option value="TEXTIL" className="text-black">Têxtil</option>
-                                <option value="METALURGICA" className="text-black">Metalúrgica</option>
-                                <option value="QUIMICA" className="text-black">Química</option>
-                                <option value="OUTROS" className="text-black">Outros</option>
-                            </select>
+                            <Label className="text-[13px] font-medium text-gray-700">Identificador Alternativo (Descrição)</Label>
+                            <Input name="identificadorAlternativo" value={formData.identificadorAlternativo} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" placeholder="Código ERP" />
                         </div>
                     </div>
 

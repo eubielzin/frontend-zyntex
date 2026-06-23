@@ -129,7 +129,8 @@ export default function ListaLocaisPage() {
             setTotalElements(prev => Math.max(0, prev - 1));
         }
       } else {
-        alert("Erro ao excluir o local no servidor. Verifique se existem vínculos.");
+        const errBody = await response.json().catch(() => null);
+        alert(errBody?.message || "Erro ao excluir o local no servidor. Verifique se existem vínculos.");
       }
     } catch (error) {
       console.error(error);

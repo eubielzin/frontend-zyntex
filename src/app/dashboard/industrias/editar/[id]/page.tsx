@@ -1,12 +1,18 @@
 "use client"
 
-import { ChevronLeft, ArrowRight, Loader2, Pencil, Info, ListTodo, Plus, Search, X } from "lucide-react" // Importei o Info aqui
+import { ChevronLeft, ChevronDown, ArrowRight, Loader2, Pencil, Info, ListTodo, Plus, Search, X } from "lucide-react" // Importei o Info aqui
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox" // Certifiquei o import do Checkbox
+import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
@@ -15,6 +21,14 @@ import { formatCNPJ, getIndustriaApiErrorMessage, isValidCNPJ, onlyCnpjDigits } 
 import { fetchTodasTarefas, type TarefaIndustriaOption } from "@/lib/tarefa-industria"
 
 const COR_SELECAO = "#cf9d09";
+
+const TIPOS_INDUSTRIA = [
+  { value: "ALIMENTICIA", label: "Alimentícia" },
+  { value: "TEXTIL", label: "Têxtil" },
+  { value: "METALURGICA", label: "Metalúrgica" },
+  { value: "QUIMICA", label: "Química" },
+  { value: "OUTROS", label: "Outros" },
+];
 
 type IndustriaResumo = {
   id: number;
@@ -385,18 +399,34 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[13px] font-medium text-gray-700">Tipo de Indústria</Label>
-                            <select
-                                name="tipoIndustria"
-                                value={formData.tipoIndustria}
-                                onChange={handleInputChange}
-                                className="flex h-11 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2A362B] appearance-none"
-                            >
-                                <option value="ALIMENTICIA">Alimentícia</option>
-                                <option value="TEXTIL">Têxtil</option>
-                                <option value="METALURGICA">Metalúrgica</option>
-                                <option value="QUIMICA">Química</option>
-                                <option value="OUTROS">Outros</option>
-                            </select>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex h-11 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2A362B] transition-colors"
+                                >
+                                  <span>
+                                    {TIPOS_INDUSTRIA.find(t => t.value === formData.tipoIndustria)?.label || "Selecione..."}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] rounded-lg border border-gray-100 p-1 shadow-md">
+                                {TIPOS_INDUSTRIA.map((tipo) => (
+                                  <DropdownMenuItem
+                                    key={tipo.value}
+                                    onClick={() => setFormData(prev => ({ ...prev, tipoIndustria: tipo.value }))}
+                                    className={`cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#cf9d09]/10 hover:text-[#b8890a] focus:bg-[#cf9d09]/10 focus:text-[#b8890a] ${
+                                      formData.tipoIndustria === tipo.value
+                                        ? "bg-[#cf9d09]/10 font-semibold text-[#b8890a]"
+                                        : "text-gray-700"
+                                    }`}
+                                  >
+                                    {tipo.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                 </div>

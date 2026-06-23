@@ -234,7 +234,8 @@ const validarTelefone = (tel: string) =>
         setToastVisible(true);
         setTimeout(() => router.push("/dashboard/promotores"), 2000);
       } else {
-        alert("Erro ao salvar. Verifique os dados.");
+        const errBody = await response.json().catch(() => null);
+        alert(errBody?.message || "Erro ao salvar. Verifique os dados.");
       }
     } catch (error) { alert("Não foi possível conectar à API."); }
     finally { setLoading(false); }

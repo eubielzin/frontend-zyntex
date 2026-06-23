@@ -89,9 +89,8 @@ export default function EditarTarefaPage({ params }: { params: Promise<{ id: str
         router.push("/dashboard/tarefas")
         router.refresh()
       } else {
-        const errText = await response.text()
-        console.error("Erro API:", errText)
-        alert("Erro ao salvar as alterações no servidor.")
+        const errBody = await response.json().catch(() => null)
+        alert(errBody?.message || "Erro ao salvar as alterações no servidor.")
       }
     } catch (error) {
       console.error("Erro de conexão:", error)

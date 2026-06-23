@@ -189,8 +189,12 @@ export default function EditarPromotorPage() {
         body: JSON.stringify(dataToSend)
       });
 
-      if (response.ok) router.push("/dashboard/promotores");
-      else alert("Erro ao salvar alterações.");
+      if (response.ok) {
+        router.push("/dashboard/promotores");
+      } else {
+        const errBody = await response.json().catch(() => null);
+        alert(errBody?.message || "Erro ao salvar alterações.");
+      }
     } catch (error) { alert("Erro de conexão."); }
     finally { setSaving(false); }
   }

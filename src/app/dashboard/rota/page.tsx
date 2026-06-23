@@ -119,7 +119,8 @@ export default function RotaPage() {
           setTotalElements(prev => Math.max(0, prev - 1));
         }
       } else {
-        alert("Erro ao excluir a rota no servidor. Verifique os vínculos.");
+        const errBody = await response.json().catch(() => null);
+        alert(errBody?.message || "Erro ao excluir a rota no servidor. Verifique os vínculos.");
       }
     } catch (error) {
       console.error("Erro ao deletar:", error);

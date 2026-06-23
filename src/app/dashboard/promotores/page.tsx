@@ -210,9 +210,8 @@ export default function ListaPromotoresPage() {
             fetchPromotores(termoBusca, currentPage);
         }
       } else {
-        const errorText = await response.text();
-        console.error("Erro no DELETE:", response.status, errorText);
-        alert("Erro ao excluir o registro no servidor.");
+        const errBody = await response.json().catch(() => null);
+        alert(errBody?.message || "Erro ao excluir o registro no servidor.");
       }
     } catch (error) {
       console.error("Erro de conexão:", error);

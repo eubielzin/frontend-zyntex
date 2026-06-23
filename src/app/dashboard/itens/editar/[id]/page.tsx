@@ -136,9 +136,8 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
         router.push("/dashboard/itens");
         router.refresh();
       } else {
-        const errText = await response.text();
-        console.error("Erro API:", errText);
-        alert("Erro ao atualizar o item no servidor.");
+        const errBody = await response.json().catch(() => null);
+        alert(errBody?.message || "Erro ao atualizar o item no servidor.");
       }
     } catch (error) {
       console.error("Erro de conexão:", error);
