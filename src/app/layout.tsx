@@ -41,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${montserrat.variable} ${kamerik.variable} font-sans antialiased`}>
+      <body suppressHydrationWarning className={`${montserrat.variable} ${kamerik.variable} font-sans antialiased`}>
         <AuthBootstrap />
         <AppAlerts />
         {children}
