@@ -443,7 +443,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
 
         <TabsContent value="tarefas" className="mt-0">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 space-y-6 min-h-[600px]">
-            <h2 className="text-[15px] font-bold text-[#2A362B] mb-8">3. Vincule tarefas a esta rota</h2>
+            <h2 className="text-[15px] font-bold text-[#2A362B] mb-8">3.Vincule tarefas e industrias a esta rota</h2>
             
             <div className="max-w-md space-y-2">
               <Label className="text-gray-600 text-sm">Tarefa Principal *</Label>

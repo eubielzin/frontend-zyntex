@@ -24,15 +24,30 @@ const buildBackendUrl = (path: string[], request: Request) => {
   return `${getBackendBaseUrl()}/${path.join("/")}${url.search}`
 }
 
+const CLIENT_TOKEN_COOKIE = "auth_token"
+
+const readAuthToken = (request: NextRequest): string | null => {
+  // 1. Token já enviado explicitamente pelo cliente no header
+  const incomingAuth = request.headers.get("authorization")
+  if (incomingAuth) return normalizeAuthToken(incomingAuth)
+
+  // 2. Cookie HttpOnly definido pelo servidor no login
+  const serverCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value
+  if (serverCookie) return normalizeAuthToken(serverCookie)
+
+  // 3. Cookie não-HttpOnly definido pelo cliente após login
+  const clientCookie = request.cookies.get(CLIENT_TOKEN_COOKIE)?.value
+  if (clientCookie) return normalizeAuthToken(decodeURIComponent(clientCookie))
+
+  return null
+}
+
 const buildForwardHeaders = (request: NextRequest) => {
   const headers = new Headers()
-  const authToken = normalizeAuthToken(
-    request.cookies.get(AUTH_COOKIE_NAME)?.value
-  )
+  const authToken = readAuthToken(request)
   const allowedHeaders = new Set([
     "accept",
     "accept-language",
-    "authorization",
     "content-type",
     "if-match",
     "if-none-match",
@@ -49,9 +64,8 @@ const buildForwardHeaders = (request: NextRequest) => {
     headers.set(key, value)
   })
 
-  if (!headers.has("Authorization") && authToken) {
+  if (authToken) {
     const authorizationHeader = buildAuthorizationHeader(authToken)
-
     if (authorizationHeader) {
       headers.set("Authorization", authorizationHeader)
     }
