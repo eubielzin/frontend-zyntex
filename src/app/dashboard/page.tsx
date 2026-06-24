@@ -262,7 +262,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Charts row: bar (left) and line (right) */}
+          {/* Charts row: bar (left) and line (right)
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <h3 className="font-bold text-gray-700 mb-4">Visitas realizadas de promotores</h3>
@@ -307,7 +307,7 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
               </div>
             </div>
-          </div>
+          </div> */}
 
         </TabsContent>
       </Tabs>

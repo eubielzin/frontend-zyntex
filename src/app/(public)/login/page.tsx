@@ -95,7 +95,7 @@ export default function LoginPage() {
           className="flex flex-col gap-6 mt-8 w-full"
         >
           <fieldset className="flex flex-col gap-2">
-            <Label htmlFor="username">Usuário</Label>
+            <Label htmlFor="username">Email</Label>
             <input
               type="text"
               id="username"
