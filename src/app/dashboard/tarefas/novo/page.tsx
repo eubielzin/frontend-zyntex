@@ -49,7 +49,7 @@ export default function NovaTarefaPage() {
       })
 
       if (response.ok) {
-        router.push("/dashboard/tarefas")
+        router.push("/dashboard/industrias")
         router.refresh()
       } else {
         const errBody = await response.json().catch(() => null)
@@ -73,7 +73,7 @@ export default function NovaTarefaPage() {
           asChild
           className="h-10 w-10 rounded-full text-gray-500 transition-colors hover:bg-[#cf9d09] hover:text-white"
         >
-          <Link href="/dashboard/tarefas">
+          <Link href="/dashboard/industrias">
             <ChevronLeft className="h-6 w-6" />
           </Link>
         </Button>
@@ -116,7 +116,7 @@ export default function NovaTarefaPage() {
             asChild
             className="h-12 px-6 font-medium text-gray-500 transition-colors hover:bg-[#fff7dd] hover:text-[#cf9d09]"
           >
-            <Link href="/dashboard/tarefas">Cancelar</Link>
+            <Link href="/dashboard/industrias">Cancelar</Link>
           </Button>
           <Button
             onClick={handleSave}
