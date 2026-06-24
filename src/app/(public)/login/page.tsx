@@ -99,7 +99,7 @@ export default function LoginPage() {
             <input
               type="text"
               id="username"
-              placeholder="Digite seu nome de usuário"
+              placeholder="Digite seu email"
               className="border rounded-lg border-black/20 pl-3 h-11"
               {...register("username")}
             />

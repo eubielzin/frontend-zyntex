@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${montserrat.variable} ${kamerik.variable} font-sans antialiased`}>
         <AuthBootstrap />
         <AppAlerts />
