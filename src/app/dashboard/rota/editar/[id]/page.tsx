@@ -207,6 +207,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         diasExecucao: formData.diasExecucao,
         locais: locaisSelecionados.map((l) => ({
           localId: l.id,
+          industriaId: Number(formData.industriaId),
           tarefasIds: tarefasSelecionadasIds,
         })),
         promotores: promotoresSelecionados.map((p) => ({

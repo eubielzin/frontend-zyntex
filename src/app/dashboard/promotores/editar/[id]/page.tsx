@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { buildApiUrl } from "@/lib/api-url"
+import { apiFetch } from "@/lib/api-fetch"
 import { fetchCepData } from "@/lib/cep"
 
 // --- INTERFACES ---
@@ -127,8 +128,8 @@ export default function EditarPromotorPage() {
     const fetchData = async () => {
       try {
         const [promotorRes, supRes] = await Promise.all([
-          fetch(`${promotorApiUrl}/${id}`),
-          fetch(supervisoresApiUrl)
+          apiFetch(`${promotorApiUrl}/perfil/${id}`),
+          apiFetch(supervisoresApiUrl)
         ]);
 
         if (promotorRes.ok) {
@@ -183,7 +184,7 @@ export default function EditarPromotorPage() {
         metaMensal: formData.metaMensal.replace(/\./g, ''), 
       };
 
-      const response = await fetch(`${promotorApiUrl}/${id}`, {
+      const response = await apiFetch(`${promotorApiUrl}/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend)
@@ -250,6 +251,19 @@ export default function EditarPromotorPage() {
                       />
                       <Label htmlFor="ativo" className="text-sm font-bold text-[#2A362B] cursor-pointer font-montserrat">ATIVO</Label>
                   </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Nome</Label>
+                <div className="md:col-span-10 relative">
+                  <Input
+                    value={formData.nome}
+                    onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                    placeholder="Nome do promotor"
+                    className="h-11 pr-10"
+                  />
+                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
