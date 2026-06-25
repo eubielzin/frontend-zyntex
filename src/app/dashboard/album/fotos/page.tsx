@@ -181,7 +181,6 @@ const buildAlbumPhotosUrl = (albumId: number, dataInicio?: string, dataFim?: str
 export default function AlbumFotosPage() {
   const searchParams = useSearchParams()
   const empresa = searchParams.get("empresa") || "Nome da empresa"
-  const empresaNormalizada = React.useMemo(() => normalizeCompanyName(empresa), [empresa])
   const albumIdsParam = searchParams.get("albumIds")
   const albumId = searchParams.get("albumId")
   const dataInicioParam = searchParams.get("dataInicio") || ""
@@ -263,14 +262,8 @@ export default function AlbumFotosPage() {
         const uniquePhotos = Array.from(
           new Map(mergedPhotos.map((photo) => [photo.id, photo])).values()
         )
-        const filteredPhotos = empresaNormalizada
-          ? uniquePhotos.filter(
-              (photo) =>
-                normalizeCompanyName(getPhotoCompanyName(photo)) === empresaNormalizada
-            )
-          : uniquePhotos
 
-        setFotos(filteredPhotos)
+        setFotos(uniquePhotos)
         setCurrentPage(0)
         setLoadedImages([])
         setExpandedGroups([])
@@ -296,7 +289,7 @@ export default function AlbumFotosPage() {
     fetchFotos()
 
     return () => controller.abort()
-  }, [albumIds, dataFim, dataInicio, empresaNormalizada])
+  }, [albumIds, dataFim, dataInicio])
 
   const gruposDeLocais = React.useMemo(() => {
     const groupsMap = new Map<string, PhotoLocationGroup>()
@@ -890,80 +883,80 @@ export default function AlbumFotosPage() {
                       >
                         <div className="min-h-0 overflow-hidden">
                           <div className="border-t border-[#f1f1f1] p-4">
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                               {group.fotos.map((foto) => {
                                 const isChecked = checkedItems.includes(foto.id)
                                 const isBlockedByOtherSelection =
                                   selectedPhotoId !== null && selectedPhotoId !== foto.id
                                 const nomeFoto = getPhotoName(foto)
                                 const photoSource = getPhotoSource(foto)
-                                const companyName = getPhotoCompanyName(foto)
                                 const isLoaded = loadedImages.includes(foto.id)
 
                                 return (
                                   <div
                                     key={foto.id}
-                                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all hover:border-[#d8e0d8] hover:shadow-[0_6px_18px_rgba(42,54,43,0.08)] ${
+                                    className={`flex flex-col overflow-hidden rounded-2xl border bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all hover:border-[#d8e0d8] hover:shadow-[0_6px_18px_rgba(42,54,43,0.06)] ${
                                       isChecked
                                         ? "border-[#b8cbb8] ring-1 ring-[#d5e2d5]"
                                         : "border-[#e8e8e8]"
                                     }`}
                                   >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) =>
-                                        toggleItem(foto.id, Boolean(checked))
-                                      }
-                                      disabled={isBlockedByOtherSelection}
-                                      className="border-[#d7d7d7]"
-                                    />
-
-                                    <button
-                                      type="button"
-                                      onClick={() => openPreview(foto)}
-                                      className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#edf2ed] text-white ring-offset-2 transition focus:outline-none focus:ring-2 focus:ring-[#cf9d09]"
-                                    >
-                                      {!isLoaded ? (
-                                        <div className="absolute inset-0 animate-pulse bg-[#dde6dd]" />
-                                      ) : null}
-                                      {photoSource ? (
-                                        <Image
-                                          src={photoSource}
-                                          alt={nomeFoto}
-                                          fill
-                                          sizes="96px"
-                                          priority={currentPage === 0 && foto.id <= 4}
-                                          loading={currentPage === 0 && foto.id <= 4 ? "eager" : "lazy"}
-                                          className={`object-cover transition-opacity duration-300 ${
-                                            isLoaded ? "opacity-100" : "opacity-0"
-                                          }`}
-                                          onLoad={() =>
-                                            setLoadedImages((prev) =>
-                                              prev.includes(foto.id) ? prev : [...prev, foto.id]
-                                            )
-                                          }
-                                        />
-                                      ) : (
-                                        <div className="flex h-full w-full items-center justify-center text-[#5d755d]">
-                                          <Camera className="h-6 w-6" />
-                                        </div>
-                                      )}
-                                    </button>
-
-                                <div className="min-w-0 flex-1">
-                                  <button
-                                    type="button"
+                                    <div className="relative aspect-square w-full bg-[#edf2ed]">
+                                      <button
+                                        type="button"
                                         onClick={() => openPreview(foto)}
-                                        className="block max-w-full truncate text-left text-sm font-bold text-[#222222] transition hover:text-[#2A362B]"
+                                        className="absolute inset-0 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#cf9d09]"
+                                      >
+                                        {!isLoaded && (
+                                          <div className="absolute inset-0 animate-pulse bg-[#dde6dd]" />
+                                        )}
+                                        {photoSource ? (
+                                          <Image
+                                            src={photoSource}
+                                            alt={nomeFoto}
+                                            fill
+                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                            priority={currentPage === 0 && foto.id <= 4}
+                                            loading={currentPage === 0 && foto.id <= 4 ? "eager" : "lazy"}
+                                            className={`object-cover transition-opacity duration-300 ${
+                                              isLoaded ? "opacity-100" : "opacity-0"
+                                            }`}
+                                            onLoad={() =>
+                                              setLoadedImages((prev) =>
+                                                prev.includes(foto.id) ? prev : [...prev, foto.id]
+                                              )
+                                            }
+                                          />
+                                        ) : (
+                                          <Camera className="h-8 w-8 text-[#5d755d]" />
+                                        )}
+                                      </button>
+
+                                      <div className="absolute left-2 top-2">
+                                        <Checkbox
+                                          checked={isChecked}
+                                          onCheckedChange={(checked) =>
+                                            toggleItem(foto.id, Boolean(checked))
+                                          }
+                                          disabled={isBlockedByOtherSelection}
+                                          className="border-white bg-white/80 shadow-sm"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5 p-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => openPreview(foto)}
+                                        className="w-full truncate text-left text-sm font-semibold text-[#222222] transition hover:text-[#2A362B]"
                                       >
                                         {nomeFoto}
                                       </button>
-                                      {/* <p className="mt-1 truncate text-xs text-[#7a7a7a]">
-                                        {companyName || empresaExibida || "Empresa não identificada"}
-                                      </p> */}
-                                      <Badge className="mt-1 rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
+
+                                      <Badge className="w-fit rounded-full bg-[#d7ead8] px-2 py-0 text-[10px] font-medium text-[#6a8a6a] hover:bg-[#d7ead8]">
                                         ID {foto.id}
                                       </Badge>
+
                                       <Button
                                         type="button"
                                         variant="ghost"
@@ -973,12 +966,12 @@ export default function AlbumFotosPage() {
                                           requestReplacePhoto(foto)
                                         }}
                                         disabled={replacingPhotoId === foto.id}
-                                        className="mt-2 h-8 px-2 text-xs text-[#2A362B] hover:bg-[#eef3ee] hover:text-[#2A362B]"
+                                        className="mt-1 h-8 w-full justify-start px-2 text-xs text-[#2A362B] hover:bg-[#eef3ee] hover:text-[#2A362B]"
                                       >
                                         {replacingPhotoId === foto.id ? (
-                                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                                         ) : (
-                                          <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                                          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
                                         )}
                                         Alterar foto
                                       </Button>

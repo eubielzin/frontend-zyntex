@@ -383,10 +383,10 @@ export default function NovoLocalPage() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                    {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                    </div>
+                    </div> */}
                 </div>
 
                 <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">

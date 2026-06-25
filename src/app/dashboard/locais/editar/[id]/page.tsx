@@ -58,8 +58,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
   const [loadingInicial, setLoadingInicial] = useState(true);
   const [loadingCep, setLoadingCep] = useState(false);
   const apiUrl = buildApiUrl("/local");
-  const detalhesApiUrlPrincipal = buildApiUrl(`/local/detalhes/${localId}`);
-  const detalhesApiUrlAlternativo = buildApiUrl(`/local/${localId}/detalhes`);
+  const detalhesApiUrl = buildApiUrl(`/local/detalhes/${localId}`);
 
   // Inicializando tudo como string para evitar Uncontrolled Inputs
   const [formData, setFormData] = useState(initialFormData);
@@ -155,23 +154,17 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     const carregarDados = async () => {
       try {
         setLoadingInicial(true);
-        const [detalhesPrincipalResponse, detalhesAlternativoResponse, localResponse] = await Promise.allSettled([
-          fetch(detalhesApiUrlPrincipal),
-          fetch(detalhesApiUrlAlternativo),
+        const [detalhesResponse, localResponse] = await Promise.allSettled([
+          fetch(detalhesApiUrl),
           fetch(`${apiUrl}/${localId}`),
         ]);
 
-        const detalhesResponses = [detalhesPrincipalResponse, detalhesAlternativoResponse];
-        const detalhesCandidates = await Promise.all(
-          detalhesResponses.map(async (response) => {
-            if (response.status !== "fulfilled" || !response.value.ok) {
-              return null;
-            }
+        const detalhesData =
+          detalhesResponse.status === "fulfilled" && detalhesResponse.value.ok
+            ? unwrapPayload(await detalhesResponse.value.json())
+            : null;
 
-            const json = await response.value.json();
-            return unwrapPayload(json);
-          })
-        );
+        const detalhesCandidates = detalhesData ? [detalhesData] : [];
 
         const localData =
           localResponse.status === "fulfilled" && localResponse.value.ok
@@ -221,7 +214,7 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
     };
 
     if (localId) carregarDados();
-  }, [apiUrl, detalhesApiUrlAlternativo, detalhesApiUrlPrincipal, localId, router]);
+  }, [apiUrl, detalhesApiUrl, localId, router]);
 
   const buscarCEP = async (cepLimpo: string) => {
     if (cepLimpo.length !== 8) return;
@@ -504,11 +497,11 @@ export default function EditarLocalPage({ params }: { params: Promise<{ id: stri
                           onChange={handleCoordinateChange}
                         />
                     </div>
-
+{/* 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Fachada</Label><Input name="imagemLocalUrl" value={formData.imagemLocalUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
                         <div className="space-y-2"><Label className="text-[13px] font-medium text-gray-700">Imagem Prateleira</Label><Input name="imagemPrateleiraUrl" value={formData.imagemPrateleiraUrl || ""} onChange={handleInputChange} className="h-11 border-gray-200 focus-visible:ring-[#2A362B] text-sm" /></div>
-                    </div>
+                    </div> */}
                 </div>
 
                 <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">

@@ -81,11 +81,25 @@ export function LocalCoordinateMap({
   const tileLayerRef = React.useRef<TileLayer | null>(null)
   const pinIconRef = React.useRef<import("leaflet").DivIcon | null>(null)
   const onChangeRef = React.useRef(onChange)
+  const pendingPositionRef = React.useRef({ latitude, longitude })
   const [layerMode, setLayerMode] = React.useState<MapLayerMode>("mapa")
+  const [hasMarker, setHasMarker] = React.useState(false)
+
+  const centerOnMarker = React.useCallback(() => {
+    const marker = markerRef.current
+    const map = mapRef.current
+    if (!marker || !map) return
+    map.setView(marker.getLatLng(), Math.max(map.getZoom(), 17), { animate: true })
+  }, [])
 
   React.useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
+
+  // Mantém a posição mais recente acessível dentro do setup assíncrono do mapa
+  React.useEffect(() => {
+    pendingPositionRef.current = { latitude, longitude }
+  }, [latitude, longitude])
 
   React.useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -138,6 +152,28 @@ export function LocalCoordinateMap({
       mapRef.current = map
       pinIconRef.current = pinIcon
       tileLayerRef.current = tileLayer
+
+      // Se as coordenadas chegaram antes do Leaflet terminar de carregar,
+      // adiciona o marcador agora com os valores mais recentes
+      const pending = getPosition(pendingPositionRef.current.latitude, pendingPositionRef.current.longitude)
+      if (pending.hasCoordinate && !markerRef.current) {
+        const marker = L.marker([pending.latitude, pending.longitude], {
+          draggable: true,
+          icon: pinIcon,
+        }).addTo(map)
+
+        marker.on("dragend", () => {
+          const pos = marker.getLatLng()
+          onChangeRef.current({
+            latitude: Number(pos.lat.toFixed(7)),
+            longitude: Number(pos.lng.toFixed(7)),
+          })
+        })
+
+        markerRef.current = marker
+        map.setView([pending.latitude, pending.longitude], 17)
+        setHasMarker(true)
+      }
 
       setTimeout(() => map.invalidateSize(), 0)
 
@@ -198,6 +234,7 @@ export function LocalCoordinateMap({
     if (!position.hasCoordinate) {
       markerRef.current?.remove()
       markerRef.current = null
+      setHasMarker(false)
       return
     }
 
@@ -229,6 +266,7 @@ export function LocalCoordinateMap({
 
         markerRef.current = marker
         mapRef.current.setView([position.latitude, position.longitude], 18)
+        setHasMarker(true)
       })
       return
     }
@@ -275,6 +313,20 @@ export function LocalCoordinateMap({
           </button>
         </div>
         <div ref={containerRef} className="h-[320px] w-full" />
+        {hasMarker && (
+          <button
+            type="button"
+            onClick={centerOnMarker}
+            title="Centralizar no marcador"
+            className="absolute bottom-3 left-3 z-1000 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.25)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-shadow"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+              <circle cx="12" cy="10" r="4" fill="#cf9d09" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#cf9d09" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="10" r="7" stroke="#cf9d09" strokeWidth="1.5" fill="none" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   )

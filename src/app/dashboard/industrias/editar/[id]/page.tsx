@@ -30,22 +30,6 @@ const TIPOS_INDUSTRIA = [
   { value: "OUTROS", label: "Outros" },
 ];
 
-type IndustriaResumo = {
-  id: number;
-  ativo?: boolean;
-  nomeIndustria?: string;
-  razaoSocial?: string;
-  nomeFantasia?: string;
-  cnpj?: string;
-  telefone?: string;
-  email?: string;
-  identificadorAlternativo?: string;
-  tipoIndustria?: string;
-  estado?: string;
-  cidade?: string;
-  cep?: string;
-  tarefasIds?: number[];
-}
 
 export default function EditarIndustriaPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -63,30 +47,9 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
   const apiUrl = buildApiUrl("/industria");
 
   const buscarIndustriaResumo = async (id: string) => {
-    const idNumerico = Number(id);
-    let page = 0;
-    let totalPages = 1;
-
-    while (page < totalPages) {
-      const response = await fetch(`${apiUrl}/paged?page=${page}&size=100`);
-
-      if (!response.ok) {
-        throw new Error("Não foi possível carregar os dados da indústria.");
-      }
-
-      const data = await response.json();
-      const content = Array.isArray(data?.content) ? data.content : [];
-      const industria = content.find((item: IndustriaResumo) => Number(item.id) === idNumerico);
-
-      if (industria) {
-        return industria;
-      }
-
-      totalPages = Number(data?.totalPages) || 1;
-      page += 1;
-    }
-
-    throw new Error("Indústria não encontrada.");
+    const response = await fetch(`${apiUrl}/${id}`);
+    if (!response.ok) throw new Error("Não foi possível carregar os dados da indústria.");
+    return response.json();
   };
 
   // Adicionado 'ativo' no estado inicial
@@ -129,10 +92,10 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
           })
         ]);
         const industriaIdNumerico = Number(industriaId);
-        
         // Mapeamento garantindo que o objeto de endereço exista
+        const end = data.endereco ?? {};
         setFormData({
-          ativo: data.ativo !== undefined ? data.ativo : true, // Carrega o status do banco
+          ativo: data.ativo !== undefined ? data.ativo : true,
           nomeIndustria: data.nomeIndustria || "",
           razaoSocial: data.razaoSocial || "",
           nomeFantasia: data.nomeFantasia || "",
@@ -142,15 +105,22 @@ export default function EditarIndustriaPage({ params }: { params: Promise<{ id: 
           identificadorAlternativo: data.identificadorAlternativo || "",
           tipoIndustria: data.tipoIndustria || "",
           endereco: {
-            ...formData.endereco,
-            cep: data.cep || "",
-            cidade: data.cidade || "",
-            estado: data.estado || "",
+            logradouro: end.logradouro || "",
+            tipoLogradouro: end.tipoLogradouro || "",
+            numero: end.numero || "",
+            complemento: end.complemento || "",
+            bairro: end.bairro || "",
+            cidade: end.cidade || "",
+            estado: end.estado || "",
+            cep: end.cep || "",
+            referencia: end.referencia || "",
+            latitude: end.latitude || "",
+            longitude: end.longitude || "",
           }
         });
         setTarefasDisponiveis(tarefas);
-        const tarefasDaIndustria = Array.isArray(data.tarefasIds)
-          ? data.tarefasIds.map(Number).filter(Number.isFinite)
+        const tarefasDaIndustria = Array.isArray(data.tarefas) && data.tarefas.length > 0
+          ? data.tarefas.map((t: { id: number }) => t.id)
           : tarefas
               .filter(
                 (tarefa) =>
