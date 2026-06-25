@@ -68,10 +68,10 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         setLoadingInicial(true);
 
         const [resPromotores, resLocais, resIndustrias, resRotaAtual] = await Promise.all([
-          fetch(promotorSelectApiUrl),
-          fetch(localSelectApiUrl),
-          fetch(industriaSelectApiUrl),
-          fetch(`${rotaApiUrl}/${rotaId}`),
+          apiFetch(promotorSelectApiUrl),
+          apiFetch(localSelectApiUrl),
+          apiFetch(industriaSelectApiUrl),
+          apiFetch(`${rotaApiUrl}/${rotaId}`),
         ]);
 
         const promotoresAPI = resPromotores.ok ? await resPromotores.json() : [];
@@ -83,7 +83,7 @@ export default function EditarRotaPage({ params }: { params: Promise<{ id: strin
         if (!resRotaAtual.ok) throw new Error("Rota não encontrada");
         const rotaDados = await resRotaAtual.json();
 
-        const industriaId = rotaDados.industriaId ?? "";
+        const industriaId = rotaDados.industriaId ?? rotaDados.tarefas?.[0]?.industriaId ?? "";
         if (industriaId) {
           const industria = industriasAPI.find((i) => String(i.id) === String(industriaId));
           setTarefasDisponiveis(industria?.tarefas ?? []);
