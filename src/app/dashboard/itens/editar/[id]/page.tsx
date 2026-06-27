@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { buildApiUrl } from "@/lib/api-url"
 import { normalizeIndustriaOptions, type IndustriaOption } from "@/lib/industria-options"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export default function EditarItemPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -227,25 +228,24 @@ export default function EditarItemPage({ params }: { params: Promise<{ id: strin
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <Label className="text-[13px] font-medium text-gray-700">Indústria</Label>
-              <div className="relative">
-                <select
-                  name="industriaId"
-                  value={formData.industriaId}
-                  onChange={handleInputChange}
-                  className="flex h-11 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2A362B] disabled:opacity-50 appearance-none pr-10"
-                  disabled={loadingIndustrias}
-                >
-                  <option value="" disabled className="text-gray-400">
-                    {loadingIndustrias ? "Carregando indústrias..." : "Selecione uma indústria..."}
-                  </option>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild disabled={loadingIndustrias}>
+                  <button type="button" className="flex h-11 w-full items-center justify-between rounded-md border border-[#C59509] bg-[#C59509] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#2A362B] transition-colors disabled:opacity-50">
+                    <span className={formData.industriaId ? "text-white" : "text-[#F2F2F2]"}>
+                      {loadingIndustrias ? "Carregando..." : industrias.find(i => String(i.id) === String(formData.industriaId))?.nomeIndustria || "Selecione uma indústria..."}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-[#F2F2F2]" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] rounded-lg border border-gray-100 p-1 shadow-md">
                   {industrias.map((ind) => (
-                    <option key={ind.id} value={ind.id} className="text-black">
+                    <DropdownMenuItem key={ind.id} onClick={() => setFormData(prev => ({ ...prev, industriaId: String(ind.id) }))}
+                      className={`cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#cf9d09]/10 hover:text-[#b8890a] focus:bg-[#cf9d09]/10 focus:text-[#b8890a] ${String(formData.industriaId) === String(ind.id) ? "bg-[#cf9d09]/10 font-semibold text-[#b8890a]" : "text-gray-700"}`}>
                       {ind.nomeIndustria}
-                    </option>
+                    </DropdownMenuItem>
                   ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="space-y-2">

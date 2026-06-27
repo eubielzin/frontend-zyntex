@@ -1,11 +1,12 @@
 "use client"
-import { Pencil, X, ChevronLeft, ArrowRight, Check, Plus, Search, Loader2 } from "lucide-react"
+import { Pencil, X, ChevronLeft, ArrowRight, Check, Plus, Search, Loader2, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
@@ -262,16 +263,24 @@ export default function NovaRotaPage() {
             <h2 className="text-lg font-semibold text-gray-800 border-b pb-4">3. Vincule tarefas a esta rota</h2>
             <div className="max-w-md space-y-2">
               <Label className="text-gray-600 font-medium text-sm">Indústria *</Label>
-              <select
-                value={formData.industriaId}
-                onChange={(e) => handleIndustriaChange(e.target.value)}
-                className="h-11 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-[#2A362B]"
-              >
-                <option value="">Selecione a indústria</option>
-                {industrias.map((ind) => (
-                  <option key={ind.id} value={ind.id}>{ind.nomeIndustria}</option>
-                ))}
-              </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="flex h-11 w-full items-center justify-between rounded-md border border-[#C59509] bg-[#C59509] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#2A362B] transition-colors">
+                    <span className={formData.industriaId ? "text-white" : "text-[#F2F2F2]"}>
+                      {industrias.find(i => String(i.id) === String(formData.industriaId))?.nomeIndustria || "Selecione a indústria"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-[#F2F2F2]" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] rounded-lg border border-gray-100 p-1 shadow-md">
+                  {industrias.map((ind) => (
+                    <DropdownMenuItem key={ind.id} onClick={() => handleIndustriaChange(String(ind.id))}
+                      className={`cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#cf9d09]/10 hover:text-[#b8890a] focus:bg-[#cf9d09]/10 focus:text-[#b8890a] ${String(formData.industriaId) === String(ind.id) ? "bg-[#cf9d09]/10 font-semibold text-[#b8890a]" : "text-gray-700"}`}>
+                      {ind.nomeIndustria}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[450px]">
               <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">

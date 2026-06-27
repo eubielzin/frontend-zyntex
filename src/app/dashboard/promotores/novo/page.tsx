@@ -328,8 +328,8 @@ const validarTelefone = (tel: string) =>
                   <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {isSexoOpen && (
                     <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
-                      <div onClick={() => {setFormData({...formData, sexo: "MASCULINO"}); setIsSexoOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat">Masculino</div>
-                      <div onClick={() => {setFormData({...formData, sexo: "FEMININO"}); setIsSexoOpen(false)}} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm font-montserrat">Feminino</div>
+                      <div onClick={() => {setFormData({...formData, sexo: "MASCULINO"}); setIsSexoOpen(false)}} className={`px-4 py-3 cursor-pointer text-sm font-montserrat transition-colors ${formData.sexo === "MASCULINO" ? "bg-[#cf9d09]/10 text-[#b8890a] font-semibold" : "hover:bg-gray-50 text-gray-700"}`}>Masculino</div>
+                      <div onClick={() => {setFormData({...formData, sexo: "FEMININO"}); setIsSexoOpen(false)}} className={`px-4 py-3 cursor-pointer text-sm font-montserrat transition-colors ${formData.sexo === "FEMININO" ? "bg-[#cf9d09]/10 text-[#b8890a] font-semibold" : "hover:bg-gray-50 text-gray-700"}`}>Feminino</div>
                     </div>
                   )}
                 </div>
@@ -339,21 +339,17 @@ const validarTelefone = (tel: string) =>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <Label className="md:col-span-2 text-gray-600 font-medium font-montserrat text-sm">Supervisor</Label>
                 <div className="md:col-span-10 relative" ref={dropdownSupRef}>
-                  <div 
-                    onClick={() => setIsSupOpen(!isSupOpen)} 
-                    className={`flex items-center justify-between h-11 border rounded-md px-3 cursor-pointer bg-white pr-10 transition-all ${
-                      formData.supervisorId ? 'border-[#2A362B] ring-1 ring-[#2A362B]/10' : 'border-gray-200'
-                    }`}
-                    
+                  <div
+                    onClick={() => setIsSupOpen(!isSupOpen)}
+                    className="flex items-center justify-between h-11 border border-[#C59509] rounded-md px-3 cursor-pointer bg-[#C59509] pr-4 transition-all"
                   >
-                    <span className={`text-sm font-montserrat ${formData.supervisorId ? 'text-[#2A362B] font-semibold' : 'text-gray-400'}`}>
-                      {formData.supervisorId 
-                        ? supervisores.find(s => s.id === Number(formData.supervisorId))?.username 
+                    <span className={`text-sm font-montserrat ${formData.supervisorId ? 'text-white font-semibold' : 'text-[#F2F2F2]'}`}>
+                      {formData.supervisorId
+                        ? supervisores.find(s => s.id === Number(formData.supervisorId))?.username
                         : "Selecione o supervisor"}
                     </span>
-                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSupOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-4 w-4 text-[#F2F2F2] transition-transform ${isSupOpen ? 'rotate-180' : ''}`} />
                   </div>
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   {isSupOpen && (
                     <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
                       {supervisores.map(sup => {
@@ -363,7 +359,7 @@ const validarTelefone = (tel: string) =>
                             key={sup.id} 
                             onClick={() => {setFormData({...formData, supervisorId: sup.id}); setIsSupOpen(false)}} 
                             className={`flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-montserrat border-b last:border-0 transition-colors ${
-                              isSelected ? 'bg-[#CF9D09] text-[#ffffff] font-bold' : 'hover:bg-gray-50 text-gray-700'
+                              isSelected ? 'bg-[#cf9d09]/10 text-[#b8890a] font-semibold' : 'hover:bg-gray-50 text-gray-700'
                             }`}
                           >
                             <span>{sup.username}</span>

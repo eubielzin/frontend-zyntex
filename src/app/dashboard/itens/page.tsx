@@ -72,7 +72,8 @@ export default function ListaItensPage() {
   const [loading, setLoading] = React.useState(true);
   const [loadingExport, setLoadingExport] = React.useState(false); // Estado de loading para o Excel
   const [busca, setBusca] = React.useState("");
-  
+  const [buscando, setBuscando] = React.useState(false);
+
   // ESTADOS DE PAGINAÇÃO (Baseado no Pageable do Spring Boot)
   const [currentPage, setCurrentPage] = React.useState(0);
   const [totalPages, setTotalPages] = React.useState(1);
@@ -93,10 +94,10 @@ export default function ListaItensPage() {
     try {
         setLoading(true);
         const response = await fetch(`${getApiUrl()}/paged?page=${page}&size=10`);
-        
+
         if (response.ok) {
             const data = await response.json();
-            setItens(data.content || []); 
+            setItens(data.content || []);
             setTotalPages(data.totalPages || 1);
             setCurrentPage(data.number || 0);
             setTotalElements(data.totalElements || 0);
@@ -110,10 +111,42 @@ export default function ListaItensPage() {
     }
   };
 
-  // Toda vez que a página mudar, busca novamente no backend
+  // Toda vez que a página mudar (sem busca ativa), busca novamente no backend
   React.useEffect(() => {
-      fetchItens(currentPage);
+    if (!busca.trim()) fetchItens(currentPage);
   }, [currentPage]);
+
+  // Debounce na busca — chama o backend após 400ms sem digitar
+  React.useEffect(() => {
+    if (!busca.trim()) {
+      fetchItens(0);
+      setCurrentPage(0);
+      return;
+    }
+
+    setBuscando(true);
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${getApiUrl()}/buscar?descricao=${encodeURIComponent(busca.trim())}`);
+        if (response.ok) {
+          const data = await response.json();
+          const lista = Array.isArray(data) ? data : [];
+          setItens(lista);
+          setTotalPages(1);
+          setCurrentPage(0);
+          setTotalElements(lista.length);
+        }
+      } catch (error) {
+        console.error("Erro na busca", error);
+      } finally {
+        setLoading(false);
+        setBuscando(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [busca]);
 
   // Função de Exclusão (DELETE) sem o alert feio do navegador
   const handleDelete = async (id: number) => {
@@ -167,11 +200,7 @@ export default function ListaItensPage() {
     }
   };
 
-  // Filtro de busca (Nome ou Marca) local - afeta a página atual
-  const itensFiltrados = itens.filter(item => 
-      item.descricao?.toLowerCase().includes(busca.toLowerCase()) ||
-      item.marca?.toLowerCase().includes(busca.toLowerCase())
-  );
+  const itensFiltrados = itens;
 
   // Formatador de Moeda para o Preço Sugerido
   const formatarMoeda = (valor?: number) => {
@@ -227,7 +256,7 @@ export default function ListaItensPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input 
                 type="search" 
-                placeholder="Buscar item na página..." 
+                placeholder="Buscar por descrição..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0" 
