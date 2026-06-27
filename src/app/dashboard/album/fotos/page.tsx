@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { buildApiUrl } from "@/lib/api-url"
+import { apiFetch } from "@/lib/api-fetch"
 import {
   Camera,
   ChevronDown,
@@ -239,26 +240,29 @@ export default function AlbumFotosPage() {
         setLoading(true)
         setErrorMessage("")
 
-        const responses = await Promise.all(
+        const results = await Promise.allSettled(
           albumIds.map((currentAlbumId) =>
-            fetch(buildAlbumPhotosUrl(currentAlbumId, dataInicio, dataFim), {
+            apiFetch(buildAlbumPhotosUrl(currentAlbumId, dataInicio, dataFim), {
               signal: controller.signal,
             })
           )
         )
 
-        if (responses.some((response) => !response.ok)) {
-          throw new Error("Nao foi possivel carregar as fotos deste album.")
+        const mergedPhotos: AlbumPhoto[] = []
+        let anyFailed = false
+        for (const result of results) {
+          if (result.status === "fulfilled" && result.value.ok) {
+            const data = (await result.value.json()) as AlbumPhoto[]
+            if (Array.isArray(data)) mergedPhotos.push(...data)
+          } else {
+            anyFailed = true
+          }
         }
 
-        const photosByAlbum = await Promise.all(
-          responses.map(async (response) => {
-            const data = (await response.json()) as AlbumPhoto[]
-            return Array.isArray(data) ? data : []
-          })
-        )
+        if (mergedPhotos.length === 0 && anyFailed) {
+          throw new Error("Nao foi possivel carregar as fotos. Verifique sua sessao e tente novamente.")
+        }
 
-        const mergedPhotos = photosByAlbum.flat()
         const uniquePhotos = Array.from(
           new Map(mergedPhotos.map((photo) => [photo.id, photo])).values()
         )
@@ -775,7 +779,7 @@ export default function AlbumFotosPage() {
                 type="button"
                 variant="outline"
                 onClick={closeLocalGroup}
-                className="h-[45px] border-[#dcdcdc] text-[#2A362B]"
+                className="h-[45px] bg-[#cf9d09]  text-white"
               >
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 Voltar aos locais
