@@ -79,7 +79,8 @@ export default function ListaLocaisPage() {
   // Estados dos Dados e Loading
   const [locais, setLocais] = React.useState<Local[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [loadingExport, setLoadingExport] = React.useState(false); // Estado para o loading da exportação
+  const [buscando, setBuscando] = React.useState(false);
+  const [loadingExport, setLoadingExport] = React.useState(false);
   const [busca, setBusca] = React.useState("");
 
   // ESTADOS DE PAGINAÇÃO (Spring Data JPA Pageable)
@@ -87,10 +88,7 @@ export default function ListaLocaisPage() {
   const [totalPages, setTotalPages] = React.useState(1);
   const [totalElements, setTotalElements] = React.useState(0);
 
-  // Evita duplicar /api/api
-  const getApiUrl = () => {
-    return buildApiUrl("/local");
-  };
+  const getApiUrl = () => buildApiUrl("/local");
 
   const carregarLocais = async (page: number) => {
     try {
@@ -113,8 +111,31 @@ export default function ListaLocaisPage() {
   };
 
   React.useEffect(() => {
+    if (busca.trim()) return;
     carregarLocais(currentPage);
-  }, [currentPage]);
+  }, [currentPage, busca]);
+
+  React.useEffect(() => {
+    if (!busca.trim()) return;
+    const timer = setTimeout(async () => {
+      try {
+        setBuscando(true);
+        const response = await fetch(`${getApiUrl()}/buscar?descricao=${encodeURIComponent(busca.trim())}&page=${currentPage}&size=10`);
+        if (response.ok) {
+          const data = await response.json();
+          setLocais(data.content || []);
+          setTotalPages(data.totalPages || 1);
+          setCurrentPage(data.number || 0);
+          setTotalElements(data.totalElements || 0);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar", error);
+      } finally {
+        setBuscando(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [busca, currentPage]);
 
   const handleDeletar = async (id: number) => {
     try {
@@ -165,11 +186,7 @@ export default function ListaLocaisPage() {
     }
   };
 
-  const locaisFiltrados = locais.filter(local => 
-    local.descricao?.toLowerCase().includes(busca.toLowerCase()) ||
-    local.razaoSocial?.toLowerCase().includes(busca.toLowerCase()) ||
-    local.apelido?.toLowerCase().includes(busca.toLowerCase())
-  );
+  const locaisFiltrados = locais;
 
   const renderPaginationItems = () => {
     const items = [];
@@ -214,12 +231,16 @@ export default function ListaLocaisPage() {
 
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                {buscando ? (
+                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                )}
                 <Input
                     type="search"
-                    placeholder="Buscar pela descrição na página..."
+                    placeholder="Buscar por descrição..."
                     value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
+                    onChange={(e) => { setBusca(e.target.value); setCurrentPage(0); }}
                     className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
                 />
             </div>

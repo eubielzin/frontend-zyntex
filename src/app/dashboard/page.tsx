@@ -53,11 +53,8 @@ const postsData = [
 ];
 
 const userRanking = [
-  { name: 'User Name', value: '', trend: '+8,2%', color: '#5E8B61' },
-  { name: 'User Name', value: '', trend: '+7%', color: '#7DA47F' },
-  { name: 'User Name', value: '', trend: '+2,5%', color: '#4A6B4C' },
-  { name: 'User Name', value: '', trend: '-6,5%', color: '#8EB291', isNegative: true },
-  { name: 'User Name', value: '', trend: '+1,7%', color: '#A3C4A6' },
+  { name: 'Finalizada', value: '', trend: '0', color: '#5E8B61' },
+  { name: 'Pendente', value: '', trend: '0', color: '#7DA47F' },
 ];
 
 const statusColors = ['#5E8B61', '#7DA47F', '#A3C4A6', '#cf9d09', '#cbd5c9']
@@ -252,7 +249,7 @@ export default function DashboardPage() {
                       <div className="text-sm">
                         <div className="font-bold text-[#2A362B]">{u.value}</div>
                         {'trend' in u ? (
-                          <div className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full ${u.isNegative ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{u.trend}</div>
+                          <div className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full  ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{u.trend}</div>
                         ) : null}
                       </div>
                     </div>
