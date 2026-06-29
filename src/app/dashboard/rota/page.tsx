@@ -58,12 +58,14 @@ import { buildApiUrl } from "@/lib/api-url"
 interface Rota {
   id: number;
   descricao: string;
+  nomeTarefa?: string;
 }
 
 export default function RotaPage() {
   const router = useRouter(); 
   const [rotas, setRotas] = React.useState<Rota[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [buscando, setBuscando] = React.useState(false);
   const [loadingExport, setLoadingExport] = React.useState(false);
   const [termoBusca, setTermoBusca] = React.useState("");
   const [opcaoSelecionada, setOpcaoSelecionada] = React.useState("Exportar dados");
@@ -101,8 +103,31 @@ export default function RotaPage() {
   };
 
   React.useEffect(() => {
+    if (termoBusca.trim()) return;
     fetchRotas(currentPage);
-  }, [currentPage]);
+  }, [currentPage, termoBusca]);
+
+  React.useEffect(() => {
+    if (!termoBusca.trim()) return;
+    const timer = setTimeout(async () => {
+      try {
+        setBuscando(true);
+        const response = await fetch(`${getApiUrl()}/buscar?descricao=${encodeURIComponent(termoBusca.trim())}&page=${currentPage}&size=10`);
+        if (response.ok) {
+          const data = await response.json();
+          setRotas(data.content || []);
+          setTotalPages(data.totalPages || 1);
+          setCurrentPage(data.number || 0);
+          setTotalElements(data.totalElements || 0);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar", error);
+      } finally {
+        setBuscando(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [termoBusca, currentPage]);
 
   const handleExcluirRota = async (id: number) => {
     try {
@@ -155,10 +180,7 @@ export default function RotaPage() {
     }
   };
 
-  const rotasFiltradas = rotas.filter(rota => 
-    rota.descricao?.toLowerCase().includes(termoBusca.toLowerCase()) ||
-    rota.id?.toString().includes(termoBusca)
-  );
+  const rotasFiltradas = rotas;
 
   const renderPaginationItems = () => {
     const items = [];
@@ -201,12 +223,16 @@ export default function RotaPage() {
           
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              {buscando ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              )}
               <Input
                 type="search"
-                placeholder="Buscar pela descrição  ou ID..."
+                placeholder="Buscar por descrição..."
                 value={termoBusca}
-                onChange={(e) => setTermoBusca(e.target.value)}
+                onChange={(e) => { setTermoBusca(e.target.value); setCurrentPage(0); }}
                 className="pl-10 h-[45px] bg-white border-gray-200 focus-visible:ring-0"
               />
             </div>
